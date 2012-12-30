@@ -16,9 +16,9 @@ debian_mirror_url="http://ftp.uk.debian.org/emdebian/grip" # mirror for debian
 
 debian_target_version="squeeze" # The version of debian that you want to build (ATM, 'squeeze', 'wheezy' and 'sid' are supported)
 
-qemu_kernel_pkg_path="/home/celemine1gig/Downloads" # where to get the qemu kernel
+qemu_kernel_pkg_path="http://www.hs-augsburg.de/~ingmar_k/Pogoplug_V3/kernels/" # where to get the qemu kernel
 
-std_kernel_pkg_path="/home/celemine1gig/Pogoplug_files" # where to get the standard kernel
+std_kernel_pkg_path="http://www.hs-augsburg.de/~ingmar_k/Pogoplug_V3/kernels/" # where to get the standard kernel
 
 qemu_kernel_pkg_name="zImage-qemu.tar.bz2" # qemu kernel file name
 
@@ -26,7 +26,7 @@ std_kernel_pkg_name="pogoplug_v3_arch_kernel_modules.tar.bz2" # standard kernel 
 
 tar_format="bz2" # bz2(=bzip2) or gz(=gzip)
 
-output_dir_base="/home/celemine1gig/pogoplug_v3_emdebian_build" # where to put the files in general (YOU NEED TO EDIT THIS!)
+output_dir_base="/home/${USERNAME}/pogoplug_v3_emdebian_build" # where to put the files in general (YOU NEED TO EDIT THIS!)
 
 output_dir="${output_dir_base}/build_`date +%s`" # Subdirectory for each build-run, ending with the unified Unix-Timestamp (seconds passed since Jan 01 1970)
 
@@ -38,9 +38,9 @@ apt_prerequisites_debian="debootstrap binfmt-support qemu-user-static qemu qemu-
 
 apt_prerequisites_ubuntu="debootstrap binfmt-support qemu qemu-system qemu-kvm qemu-kvm-extras-static parted" # packages needed for the build process on ubuntu
 
-clean_tmp_files="no" # delete the temporary files, when the build process is done?
+clean_tmp_files="yes" # delete the temporary files, when the build process is done?
 
-create_usb_stick="yes" # create a bootable SD-card after building the rootfs?
+create_usb_stick="yes" # create a bootable USB-stick after building the rootfs?
 
 
 
@@ -50,7 +50,7 @@ create_usb_stick="yes" # create a bootable SD-card after building the rootfs?
 
 nameserver_addr="192.168.2.1" # "141.82.48.1" (YOU NEED TO EDIT THIS!)
 
-pogoplug_mac_address="00:25:31:02:B2:6B"
+pogoplug_mac_address="00:00:00:00:00:00" # (YOU NEED TO EDIT THIS!)
 
 use_ramzswap="no" # set if you want to use a compressed SWAP space in RAM (can potentionally improve performance)
 
@@ -62,4 +62,4 @@ vm_swappiness="100" # Setting for general kernel RAM swappiness: With RAMzswap a
 
 additional_packages="emdebian-archive-keyring mtd-utils udev ntp netbase module-init-tools nano bzip2 unzip zip screen less usbutils psmisc procps dhcp3-client ifupdown iputils-ping wget net-tools ssh"
 
-extra_files="/home/celemine1gig/Pogoplug_files/pogoplug_v3_arch_ledcontrol.tar.bz2"
+extra_files="http://www.hs-augsburg.de/~ingmar_k/Pogoplug_V3/extra_files/pogoplug_v3_arch_ledcontrol.tar.bz2"
