@@ -42,6 +42,10 @@ clean_tmp_files="yes" # delete the temporary files, when the build process is do
 
 create_usb_stick="yes" # create a bootable USB-stick after building the rootfs?
 
+root_password="root"
+username="tester"  # Name of user for the graphical login
+user_password="tester"
+
 
 
 ###################################

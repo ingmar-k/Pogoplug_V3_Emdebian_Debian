@@ -291,9 +291,14 @@ cat <<END > /etc/rc.local 2>>/deboostrap_stg2_errors.txt
 
 if [ -e /ramzswap_setup.sh ]
 then
-	/ramzswap_setup.sh 2>/ramzswap_setup_log.txt && rm /ramzswap_setup.sh
+	/ramzswap_setup.sh 2>/ramzswap_setup_log.txt
+	rm /ramzswap_setup.sh
 fi
-/setup.sh 2>/setup_log.txt && rm /setup.sh
+/setup.sh 2>/setup_log.txt
+rm /setup.sh
+
+/sbin/proled unlock
+/sbin/proled green
 
 exit 0
 END
@@ -339,7 +344,6 @@ mii
 gmac
 oxnas-led
 END
-
 
 update-rc.d -f mountoverflowtmp remove 2>>/deboostrap_stg2_errors.txt
 echo 'T0:2345:respawn:/sbin/getty -L ttyS0 115200 vt102' >> /etc/inittab 2>>/deboostrap_stg2_errors.txt	# disable virtual consoles
@@ -410,6 +414,7 @@ cat <<END > /etc/rc.local 2>>/ramzswap_setup_errors.txt
 
 modprobe ${ramzswap_kernel_module_name} num_devices=1 disksize_kb=${ramzswap_size_kb}
 swapon -p 100 /dev/ramzswap0
+/sbin/proled unlock
 /sbin/proled green
 exit 0
 END
@@ -446,17 +451,31 @@ then
 #
 # By default this script does nothing.
 
+/sbin/proled unlock
 /sbin/proled green
 exit 0
 END
 fi
 
-sh -c \"echo 'root
-root
+sh -c \"echo '${root_password}
+${root_password}
 ' | passwd root\" 2>>/post_deboostrap_errors.txt
 passwd -u root 2>>/post_deboostrap_errors.txt
 passwd -x -1 root 2>>/post_deboostrap_errors.txt
 passwd -w -1 root 2>>/post_deboostrap_errors.txt
+
+sh -c \"echo '${user_password}
+${user_password}
+
+
+
+
+
+' | adduser ${username}\" 2>>/post_debootstrap_errors.txt
+
+passwd -u ${username} 2>>/post_deboostrap_errors.txt
+passwd -x -1 ${username} 2>>/post_deboostrap_errors.txt
+passwd -w -1 ${username} 2>>/post_deboostrap_errors.txt
 
 ldconfig
 
@@ -467,6 +486,8 @@ exit 0" > ${output_dir}/mnt_debootstrap/setup.sh
 chmod +x ${output_dir}/mnt_debootstrap/setup.sh
 
 sed_search_n_replace "mkdir /lib/init/rw/sendsigs.omit.d/" "if [ ! -d  /lib/init/rw/sendsigs.omit.d/ ]; then mkdir /lib/init/rw/sendsigs.omit.d/; fi;" ${output_dir}/mnt_debootstrap/etc/init.d/mountkernfs.sh
+sed_search_n_replace "halt -d -f $netdown $poweroff $hddown" "/sbin/proled orange; halt -d -f $netdown $poweroff $hddown" ${output_dir}/mnt_debootstrap/etc/rc0.d/K07halt
+sed_search_n_replace "reboot -d -f -i" "/sbin/proled orange; reboot -d -f -i" ${output_dir}/mnt_debootstrap/etc/rc6.d/K07reboot
 
 sleep 1
 
