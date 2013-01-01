@@ -883,7 +883,6 @@ Param3='${3}'"
 	then
 		fn_my_echo "ERROR: File Param3 ('${3}') does NOT seem to exist."
 		ls -alh ${3%/*} >>${output_dir}/log.txt
-		ls -alh ${output_dir}/mnt_debootstrap/etc/rc*.d/ >>${output_dir}/log.txt
 	fi
 fi
 sleep 1
