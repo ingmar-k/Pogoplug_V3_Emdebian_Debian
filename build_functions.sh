@@ -485,9 +485,9 @@ exit 0" > ${output_dir}/mnt_debootstrap/setup.sh
 
 chmod +x ${output_dir}/mnt_debootstrap/setup.sh
 
-sed_search_n_replace "mkdir /lib/init/rw/sendsigs.omit.d/" "if [ ! -d  /lib/init/rw/sendsigs.omit.d/ ]; then mkdir /lib/init/rw/sendsigs.omit.d/; fi;" ${output_dir}/mnt_debootstrap/etc/init.d/mountkernfs.sh
-sed_search_n_replace "halt -d -f $netdown $poweroff $hddown" "/sbin/proled orange; halt -d -f $netdown $poweroff $hddown" ${output_dir}/mnt_debootstrap/etc/rc0.d/K07halt
-sed_search_n_replace "reboot -d -f -i" "/sbin/proled orange; reboot -d -f -i" ${output_dir}/mnt_debootstrap/etc/rc6.d/K07reboot
+sed_search_n_replace "mkdir /lib/init/rw/sendsigs.omit.d/" "if [ ! -d  /lib/init/rw/sendsigs.omit.d/ ]; then mkdir /lib/init/rw/sendsigs.omit.d/; fi;" "${output_dir}/mnt_debootstrap/etc/init.d/mountkernfs.sh"
+sed_search_n_replace "halt -d -f \$netdown \$poweroff \$hddown" "/sbin/proled orange; halt -d -f \$netdown \$poweroff \$hddown" "${output_dir}/mnt_debootstrap/etc/rc0.d/K05halt"
+sed_search_n_replace "reboot -d -f -i" "/sbin/proled amber; reboot -d -f -i" "${output_dir}/mnt_debootstrap/etc/rc6.d/K05reboot"
 
 sleep 1
 
@@ -859,7 +859,7 @@ fi
 # Description: Helper function to search and replace strings (also those containing special characters!) in files
 sed_search_n_replace()
 {
-if [ ! -z "${1}" ] && [ ! -z "${3}" ] && [ -e "${3}" ]
+if [ ! -z "${1}" ] && [ -e ${3} ] #&& [ ! -z "${2}" ] replacement might be empty!?!
 then
 	original=${1}
 	replacement=${2}
@@ -875,6 +875,16 @@ else
 'Param1='${1}'
 Param2='${2}'
 Param3='${3}'"
+	if [ -z "${1}" ]
+	then
+		fn_my_echo "ERROR: Param1 ('${1}') seems to be empty."
+	fi
+	if [ ! -e ${3} ]
+	then
+		fn_my_echo "ERROR: File Param3 ('${3}') does NOT seem to exist."
+		ls -alh ${3%/*} >>${output_dir}/log.txt
+		ls -alh ${output_dir}/mnt_debootstrap/etc/rc*.d/ >>${output_dir}/log.txt
+	fi
 fi
 sleep 1
 grep -F "${replacement}" "${file}" > /dev/null

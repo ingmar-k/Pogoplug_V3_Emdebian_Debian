@@ -6,11 +6,42 @@
 # warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License version 3 (GPLv3; http://www.gnu.org/licenses/gpl-3.0.html ) for more details.
 
 
+###########################################
+##### SETTINGS THAT YOU NEED TO EDIT: #####
+###########################################
+
+pogoplug_mac_address="00:00:00:00:00:00" # !!!VERY IMPORTANT!!! (YOU NEED TO EDIT THIS!)
+
+host_os="Debian" # Debian or Ubuntu (YOU NEED TO EDIT THIS!)
+
+output_dir_base="/home/${USERNAME}/pogoplug_v3_emdebian_build" # where to put the files in general (YOU NEED TO EDIT THIS!)
+
+root_password="root" # root users password
+
+username="tester"  # Name of user for the graphical login
+user_password="tester" # the users password
+
+nameserver_addr="192.168.2.1" # "141.82.48.1" (YOU NEED TO EDIT THIS!)
+
+additional_packages="emdebian-archive-keyring mtd-utils udev ntp netbase module-init-tools nano bzip2 unzip zip screen less usbutils psmisc procps dhcp3-client ifupdown iputils-ping wget net-tools ssh" # List of packages (each seperated by a single space) that get added to the rootfs
+
+
+
 #############################
 ##### GENERAL SETTINGS: #####
 #############################
 
-host_os="Debian" # Debian or Ubuntu (YOU NEED TO EDIT THIS!)
+
+if [ "${output_dir_base:(-1):1}" = "/" ]
+then
+	output_dir="${output_dir_base}build_`date +%s`" # Subdirectory for each build-run, ending with the unified Unix-Timestamp (seconds passed since Jan 01 1970)
+else
+	output_dir="${output_dir_base}/build_`date +%s`" # Subdirectory for each build-run, ending with the unified Unix-Timestamp (seconds passed since Jan 01 1970)
+fi
+
+output_filename="emdebian_rootfs_pogoplug_v3" # base name of the output file (compressed rootfs)
+
+extra_files="http://www.hs-augsburg.de/~ingmar_k/Pogoplug_V3/extra_files/pogoplug_v3_arch_ledcontrol.tar.bz2" # some extra files that get extracted into the rootfs, when done
 
 debian_mirror_url="http://ftp.uk.debian.org/emdebian/grip" # mirror for debian
 
@@ -26,13 +57,7 @@ std_kernel_pkg_name="pogoplug_v3_arch_kernel_modules.tar.bz2" # standard kernel 
 
 tar_format="bz2" # bz2(=bzip2) or gz(=gzip)
 
-output_dir_base="/home/${USERNAME}/pogoplug_v3_emdebian_build" # where to put the files in general (YOU NEED TO EDIT THIS!)
-
-output_dir="${output_dir_base}/build_`date +%s`" # Subdirectory for each build-run, ending with the unified Unix-Timestamp (seconds passed since Jan 01 1970)
-
 work_image_size_MB=512 # size of the temporary image file, in which the installation process is carried out
-
-output_filename="emdebian_rootfs_pogoplug_v3" # base name of the output file (compressed rootfs)
 
 apt_prerequisites_debian="debootstrap binfmt-support qemu-user-static qemu qemu-kvm qemu-system parted" # packages needed for the build process on debian
 
@@ -40,21 +65,14 @@ apt_prerequisites_ubuntu="debootstrap binfmt-support qemu qemu-system qemu-kvm q
 
 clean_tmp_files="yes" # delete the temporary files, when the build process is done?
 
-create_usb_stick="yes" # create a bootable USB-stick after building the rootfs?
-
-root_password="root"
-username="tester"  # Name of user for the graphical login
-user_password="tester"
+create_usb_stick="no" # create a bootable USB-stick after building the rootfs?
 
 
 
 ###################################
-##### CONFIGURATION SETTINGS: #####
+##### MISCELLANEOUS SETTINGS: #####
 ###################################
 
-nameserver_addr="192.168.2.1" # "141.82.48.1" (YOU NEED TO EDIT THIS!)
-
-pogoplug_mac_address="00:00:00:00:00:00" # (YOU NEED TO EDIT THIS!)
 
 use_ramzswap="no" # set if you want to use a compressed SWAP space in RAM (can potentionally improve performance)
 
@@ -64,6 +82,3 @@ ramzswap_kernel_module_name="ramzswap" # name of the ramzswap kernel module (cou
 
 vm_swappiness="100" # Setting for general kernel RAM swappiness: With RAMzswap and low RAM, a high number (like 100) could be good. Default in Linux mostly is 60.
 
-additional_packages="emdebian-archive-keyring mtd-utils udev ntp netbase module-init-tools nano bzip2 unzip zip screen less usbutils psmisc procps dhcp3-client ifupdown iputils-ping wget net-tools ssh"
-
-extra_files="http://www.hs-augsburg.de/~ingmar_k/Pogoplug_V3/extra_files/pogoplug_v3_arch_ledcontrol.tar.bz2"
