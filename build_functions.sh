@@ -262,12 +262,26 @@ END
 
 apt-get update
 
-cat <<END > /etc/network/interfaces
+if [ \"${ip_type}\" = \"dhcp\" ]
+then
+	cat <<END > /etc/network/interfaces
 auto lo eth0
 iface lo inet loopback
 iface eth0 inet dhcp
 hwaddress ether ${pogoplug_mac_address}
 END
+elif [ \"${ip_type}\" = \"static\" ]
+then
+	cat <<END > /etc/network/interfaces
+auto lo eth0
+iface lo inet loopback
+iface eth0 inet static
+address ${static_ip}
+netmask ${netmask}
+gateway ${gateway_ip}
+hwaddress ether ${pogoplug_mac_address}
+END
+fi
 
 echo pogoplug-emdebian > /etc/hostname 2>>/deboostrap_stg2_errors.txt
 
@@ -339,11 +353,23 @@ cat <<END > /etc/fstab 2>>/deboostrap_stg2_errors.txt
 /dev/root	/	ext3	noatime,errors=remount-ro	0	1
 END
 
-cat <<END > /etc/modules 2>>/deboostrap_stg2_errors.txt
+
+if [ \"${use_ramzswap}\" = \"no\" ]
+then
+	cat <<END > /etc/modules 2>>/deboostrap_stg2_errors.txt
 mii
 gmac
 oxnas-led
 END
+elif [ \"${use_ramzswap}\" = \"yes\" ]
+then
+	cat <<END > /etc/modules 2>>/deboostrap_stg2_errors.txt
+xvmalloc
+mii
+gmac
+oxnas-led
+END
+fi
 
 update-rc.d -f mountoverflowtmp remove 2>>/deboostrap_stg2_errors.txt
 echo 'T0:2345:respawn:/sbin/getty -L ttyS0 115200 vt102' >> /etc/inittab 2>>/deboostrap_stg2_errors.txt	# disable virtual consoles
@@ -412,6 +438,10 @@ cat <<END > /etc/rc.local 2>>/ramzswap_setup_errors.txt
 #
 # By default this script does nothing.
 
+if [ ! -e /dev/ramzswap0 ]
+then
+        mknod /dev/ramzswap0 b 254 0
+fi
 modprobe ${ramzswap_kernel_module_name} num_devices=1 disksize_kb=${ramzswap_size_kb}
 swapon -p 100 /dev/ramzswap0
 /sbin/proled unlock
@@ -435,7 +465,7 @@ then
 	echo vm.swappiness=${vm_swappiness} >> /etc/sysctl.conf
 fi
 
-if [ ! -z `grep setup.sh /etc/rc.local` ]
+if [ ! -z `grep setup.sh /etc/rc.local` ] # write a clean 'rc.local for the qemu-process'
 then
 	cat <<END > /etc/rc.local 2>>/post_deboostrap_errors.txt
 #!/bin/sh -e
@@ -451,8 +481,6 @@ then
 #
 # By default this script does nothing.
 
-/sbin/proled unlock
-/sbin/proled green
 exit 0
 END
 fi
@@ -486,8 +514,9 @@ exit 0" > ${output_dir}/mnt_debootstrap/setup.sh
 chmod +x ${output_dir}/mnt_debootstrap/setup.sh
 
 sed_search_n_replace "mkdir /lib/init/rw/sendsigs.omit.d/" "if [ ! -d  /lib/init/rw/sendsigs.omit.d/ ]; then mkdir /lib/init/rw/sendsigs.omit.d/; fi;" "${output_dir}/mnt_debootstrap/etc/init.d/mountkernfs.sh"
-sed_search_n_replace "halt -d -f \$netdown \$poweroff \$hddown" "/sbin/proled orange; halt -d -f \$netdown \$poweroff \$hddown" "${output_dir}/mnt_debootstrap/etc/rc0.d/K05halt"
-sed_search_n_replace "reboot -d -f -i" "/sbin/proled amber; reboot -d -f -i" "${output_dir}/mnt_debootstrap/etc/rc6.d/K05reboot"
+
+sed_search_n_replace "halt -d -f \$netdown \$poweroff \$hddown" "/sbin/proled orange; halt -d -f \$netdown \$poweroff \$hddown" `find ${output_dir}/mnt_debootstrap/etc/rc0.d/ -name K*halt`
+sed_search_n_replace "reboot -d -f -i" "/sbin/proled amber; reboot -d -f -i" `find ${output_dir}/mnt_debootstrap/etc/rc6.d/ -name K*reboot`
 
 sleep 1
 
@@ -697,14 +726,15 @@ then
 					set -- ${extra_files}
 					while [ $# -gt 0 ]
 					do
-						if [ -e ${1} ]
+						extra_files_path=${1%/*}
+						extra_files_name=${1##*/}
+						get_n_check_file "${extra_files_path}" "${extra_files_name}" "extra_files"
+						tar_all extract "${output_dir}/tmp/${extra_files_name}" "${output_dir}/usb-stick"
+						if [ "$?" = "0" ]
 						then
-							extra_files_path=${1%/*}
-							extra_files_name=${1##*/}
-							get_n_check_file "${extra_files_path}" "${extra_files_name}" "extra_files"
-							tar_all extract "${output_dir}/tmp/${extra_files_name}" "${output_dir}/usb-stick"
+							fn_my_echo "Successfully extracted '${extra_files_name}' to '${device}1'."
 						else
-							fn_my_echo "ERROR! File '${1}' does not seem to exist! Can't add any files to the rootfs."
+							fn_my_echo "ERROR while trying to extract '${extra_files_name}' to '${device}1' !"
 						fi
 					shift
 					done
@@ -959,11 +989,11 @@ One or more of these appear to be empty. Exiting now!"
 	exit 50
 fi
 
-if [ "${file_path:0:4}" = "http" ] || [ "${file_path:0:3}" = "ftp" ]
+if [ "${file_path:0:4}" = "http" ] || [ "${file_path:0:5}" = "https" ] || [ "${file_path:0:3}" = "ftp" ]
 then
 	fn_my_echo "Downloading ${short_description} from address '${file_path}/${file_name}', now."
 	cd ${output_dir}/tmp
-	wget ${file_path}/${file_name}
+	wget -t 3 ${file_path}/${file_name}
 	if [ "$?" = "0" ]
 	then
 		fn_my_echo "'${short_description}' successfully downloaded from address '${file_path}/${file_name}'."

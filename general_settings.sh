@@ -23,6 +23,14 @@ user_password="tester" # the users password
 
 nameserver_addr="192.168.2.1" # "141.82.48.1" (YOU NEED TO EDIT THIS!)
 
+ip_type="dhcp" # set this either to 'dhcp' (default) or to a 'static'
+
+static_ip="192.168.2.198" # you only need to set this, if ip-type is NOT set to 'dhcp', but to 'static'
+
+netmask="255.255.255.0" # you only need to set this, if ip-type is NOT set to 'dhcp', but to 'static'
+
+gateway_ip="192.168.2.1" # you only need to set this, if ip-type is NOT set to 'dhcp', but to 'static'
+
 additional_packages="emdebian-archive-keyring mtd-utils udev ntp netbase module-init-tools nano bzip2 unzip zip screen less usbutils psmisc procps dhcp3-client ifupdown iputils-ping wget net-tools ssh" # List of packages (each seperated by a single space) that get added to the rootfs
 
 
@@ -49,7 +57,7 @@ debian_target_version="squeeze" # The version of debian that you want to build (
 
 qemu_kernel_pkg_path="http://www.hs-augsburg.de/~ingmar_k/Pogoplug_V3/kernels/" # where to get the qemu kernel
 
-std_kernel_pkg_path="http://www.hs-augsburg.de/~ingmar_k/Pogoplug_V3/kernels/" # where to get the standard kernel
+std_kernel_pkg_path="http://www.hs-augsburg.de/~ingmar_k/Pogoplug_V3/kernels" # where to get the standard kernel
 
 qemu_kernel_pkg_name="zImage-qemu.tar.bz2" # qemu kernel file name
 
@@ -65,7 +73,7 @@ apt_prerequisites_ubuntu="debootstrap binfmt-support qemu qemu-system qemu-kvm q
 
 clean_tmp_files="yes" # delete the temporary files, when the build process is done?
 
-create_usb_stick="no" # create a bootable USB-stick after building the rootfs?
+create_usb_stick="yes" # create a bootable USB-stick after building the rootfs?
 
 
 
@@ -76,7 +84,7 @@ create_usb_stick="no" # create a bootable USB-stick after building the rootfs?
 
 use_ramzswap="no" # set if you want to use a compressed SWAP space in RAM (can potentionally improve performance)
 
-ramzswap_size_kb="3072" # size of the ramzswap device in KB
+ramzswap_size_kb="65536" # size of the ramzswap device in KB
 
 ramzswap_kernel_module_name="ramzswap" # name of the ramzswap kernel module (could have a different name on newer kernel versions)
 
