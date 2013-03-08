@@ -7,6 +7,7 @@
 # This program (including documentation) is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
 # warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License version 3 (GPLv3; http://www.gnu.org/licenses/gpl-3.0.html ) for more details.
 
+# THIS SCRIPT IS ONLY INTENDED FOR THE POGOPLUG V3! CHECK IF YOU REALLY HAVE A MODEL OF THE 3RD SERIES BEFORE USING THIS SCRIPT!
 
 #####################################
 ##### MAIN Highlevel Functions: #####
@@ -29,7 +30,7 @@ then
 	echo "Output directory '${output_dir}' successfully created."
 else
 	echo "ERROR while trying to create the output directory '${output_dir}'. Exiting now!"
-	exit 5
+	exit 10
 fi
 
 
@@ -39,7 +40,7 @@ then
 	echo "Subfolder 'tmp' of output directory '${output_dir}' successfully created."
 else
 	echo "ERROR while trying to create the 'tmp' subfolder '${output_dir}/tmp'. Exiting now!"
-	exit 6
+	exit 11
 fi
 }
 
@@ -51,10 +52,12 @@ build_rootfs()
 	create_n_mount_temp_image_file # create the image file that is then used for the rootfs
 
 	do_debootstrap # run debootstrap (first and second stage)
-
-	# disable_mnt_tmpfs # disable all entries in /etc/init.d trying to mount temporary filesystems (tmpfs), in order to save precious RAM
-
+	
 	do_post_debootstrap_config # do some further system configuration
+
+	# disable_mnt_tmpfs # disable all entries in /etc/init.d trying to mount temporary filesystems (tmpfs), in order to save precious RAM	
+	
+	change_udev_tmpfs_size
 
 	compress_debian_rootfs # compress the resulting rootfs
 }
@@ -80,7 +83,7 @@ if [[ $UID -ne 0 ]]
 then
 	echo "$0 must be run as root/superuser (sudo etc.)!
 Please try again with the necessary priviliges."
-	exit 2
+	exit 12
 fi
 }
 
@@ -94,7 +97,7 @@ fn_my_echo()
 		echo "${1}"
 	else
 		echo "Output directory '${output_dir}' doesn't exist. Exiting now!"
-		exit 3
+		exit 13
 	fi
 }
 
@@ -112,18 +115,10 @@ then
 else
 	fn_my_echo "OS-Type '${host_os}' not correct.
 Please run 'build_debian_system.sh --help' for more information"
-	exit 4
+	exit 20
 fi
 
 fn_my_echo "Running 'apt-get update' to get the latest package dependencies."
-apt-get update
-if [ "$?" = "0" ]
-then
-	fn_my_echo "'apt-get update' ran successfully! Continuing..."
-else
-	fn_my_echo "ERROR while trying to run 'apt-get update'. Exiting now."
-	exit 5
-fi
 
 set -- ${apt_prerequisites}
 
@@ -134,6 +129,18 @@ do
 	then
 		fn_my_echo "Package '${1}' is already installed. Nothing to be done."
 	else
+		if [ ! "${apt_get_update_done}" = "yes" ]
+		then
+			apt-get update
+			if [ "$?" = "0" ]
+			then
+				fn_my_echo "'apt-get update' ran successfully! Continuing..."
+				apt_get_update_done="yes"
+			else
+				fn_my_echo "ERROR while trying to run 'apt-get update'. Exiting now."
+				exit 21
+			fi
+		fi
 		fn_my_echo "Package '${1}' is not installed yet.
 Trying to install it now!"
 		apt-get install -y --force-yes ${1}
@@ -148,7 +155,7 @@ Trying to install it now!"
 If your host system is not Ubuntu 10.XX based, this could lead to errors. Please check!"
 			else
 				fn_my_echo "Exiting now!"
-				exit 7
+				exit 22
 			fi
 		fi
 	fi
@@ -165,7 +172,7 @@ You need to install a package with a version of at least 1.0.
 For example from the debian-testing repositiories.
 Link: 'http://packages.debian.org/search?keywords=qemu&searchon=names&suite=testing&section=all'
 Exiting now!"
-			exit 6
+			exit 23
 		fi
 	fi
 	shift
@@ -185,7 +192,7 @@ then
 	fn_my_echo "File '${output_dir}/${output_filename}.img' successfully created with a size of ${work_image_size_MB}MB."
 else
 	fn_my_echo "ERROR while trying to create the file '${output_dir}/${output_filename}.img'. Exiting now!"
-	exit 8
+	exit 30
 fi
 
 fn_my_echo "Formatting the image file with the ext3 filesystem."
@@ -195,7 +202,7 @@ then
 	fn_my_echo "Ext3 filesystem successfully created on '${output_dir}/${output_filename}.img'."
 else
 	fn_my_echo "ERROR while trying to create the ext3 filesystem on  '${output_dir}/${output_filename}.img'. Exiting now!"
-	exit 9
+	exit 31
 fi
 
 fn_my_echo "Creating the directory to mount the temporary filesystem."
@@ -205,7 +212,7 @@ then
 	fn_my_echo "Directory '${output_dir}/mnt_debootstrap' successfully created."
 else
 	fn_my_echo "ERROR while trying to create the directory '${output_dir}/mnt_debootstrap'. Exiting now!"
-	exit 10
+	exit 33
 fi
 
 fn_my_echo "Now mounting the temporary filesystem."
@@ -215,7 +222,7 @@ then
 	fn_my_echo "Filesystem correctly mounted on '${output_dir}/mnt_debootstrap'."
 else
 	fn_my_echo "ERROR while trying to mount the filesystem on '${output_dir}/mnt_debootstrap'. Exiting now!"
-	exit 11
+	exit 34
 fi
 
 fn_my_echo "Function 'create_n_mount_temp_image_file' DONE."
@@ -233,7 +240,7 @@ then
 else
 	fn_my_echo "ERROR while trying to run the first stage of debootstrap. Exiting now!"
 	regular_cleanup
-	exit 12
+	exit 40
 fi
 
 modprobe binfmt_misc
@@ -255,9 +262,8 @@ mkdir -p /usr/share/man/man1/
 cd /root 2>>/deboostrap_stg2_errors.txt
 
 cat <<END > /etc/apt/sources.list 2>>/deboostrap_stg2_errors.txt
-deb ${debian_mirror_url} ${debian_target_version} main dev doc debug java
-# deb-src ${debian_mirror_url} ${debian_target_version} main
-
+deb ${debian_mirror_url} ${debian_target_version} ${debian_target_repos}
+deb ${debian_mirror_url} ${debian_target_version}-proposed-updates ${debian_target_repos}
 END
 
 apt-get update
@@ -283,10 +289,10 @@ hwaddress ether ${pogoplug_mac_address}
 END
 fi
 
-echo pogoplug-emdebian > /etc/hostname 2>>/deboostrap_stg2_errors.txt
+echo ${pogo_hostname} > /etc/hostname 2>>/deboostrap_stg2_errors.txt
 
 echo \"127.0.0.1 localhost\" >> /etc/hosts 2>>/deboostrap_stg2_errors.txt
-echo \"127.0.0.1 pogoplug-emdebian\" >> /etc/hosts 2>>/deboostrap_stg2_errors.txt
+echo \"127.0.0.1 ${pogo_hostname}\" >> /etc/hosts 2>>/deboostrap_stg2_errors.txt
 echo \"nameserver ${nameserver_addr}\" > /etc/resolv.conf 2>>/deboostrap_stg2_errors.txt
 
 cat <<END > /etc/rc.local 2>>/deboostrap_stg2_errors.txt
@@ -308,11 +314,14 @@ then
 	/ramzswap_setup.sh 2>/ramzswap_setup_log.txt
 	rm /ramzswap_setup.sh
 fi
+if [ -e /zram_setup.sh ]
+then
+	/zram_setup.sh 2>/zram_setup_log.txt
+	rm /zram_setup.sh
+fi
 /setup.sh 2>/setup_log.txt
 rm /setup.sh
 
-/sbin/proled unlock
-/sbin/proled green
 
 exit 0
 END
@@ -328,7 +337,8 @@ fi
 mount devpts ${output_dir}/mnt_debootstrap/dev/pts -t devpts
 mount -t proc proc ${output_dir}/mnt_debootstrap/proc
 
-/usr/sbin/chroot ${output_dir}/mnt_debootstrap /bin/sh -c "
+
+/usr/sbin/chroot ${output_dir}/mnt_debootstrap /bin/bash -c "
 export LANG=C 2>>/deboostrap_stg2_errors.txt
 apt-get -y --force-yes  install apt-utils dialog locales 2>>/deboostrap_stg2_errors.txt
 
@@ -338,6 +348,10 @@ APT::Install-Suggests \"0\";
 END
 
 apt-get -d -y --force-yes install ${additional_packages} 2>>/deboostrap_stg2_errors.txt
+if [ \"pogoplug_v3_version\" = \"pro\"_]
+then
+	apt-get -d -y --force-yes install firmware-ralink 2>>/deboostrap_stg2_errors.txt
+fi
 
 sed -i 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/g' /etc/locale.gen 2>>/deboostrap_stg2_errors.txt	# enable locale
 locale-gen 2>>/deboostrap_stg2_errors.txt
@@ -350,26 +364,9 @@ cat <<END > /etc/fstab 2>>/deboostrap_stg2_errors.txt
 # /etc/fstab: static file system information.
 #
 # <file system> <mount point>   <type>  <options>       <dump>  <pass>
-/dev/root	/	ext3	noatime,errors=remount-ro	0	1
+/dev/root	/	ext3	defaults,noatime	0	1
+/dev/sda2	none	swap	defaults	0	0
 END
-
-
-if [ \"${use_ramzswap}\" = \"no\" ]
-then
-	cat <<END > /etc/modules 2>>/deboostrap_stg2_errors.txt
-mii
-gmac
-oxnas-led
-END
-elif [ \"${use_ramzswap}\" = \"yes\" ]
-then
-	cat <<END > /etc/modules 2>>/deboostrap_stg2_errors.txt
-xvmalloc
-mii
-gmac
-oxnas-led
-END
-fi
 
 update-rc.d -f mountoverflowtmp remove 2>>/deboostrap_stg2_errors.txt
 echo 'T0:2345:respawn:/sbin/getty -L ttyS0 115200 vt102' >> /etc/inittab 2>>/deboostrap_stg2_errors.txt	# disable virtual consoles
@@ -417,9 +414,19 @@ then
 	mkdir -p ${output_dir}/mnt_debootstrap/lib/firmware/
 	mv ${output_dir}/mnt_debootstrap/lib/modules/gmac_copro_firmware ${output_dir}/mnt_debootstrap/lib/firmware/ 2>>${output_dir}/log.txt
 else
-	fn_my_echo "Could not find '${output_dir}/mnt_debootstrap/lib/modules/gmac_copro_firmware'.
-So, not moving it."
+	fn_my_echo "Could not find '${output_dir}/mnt_debootstrap/lib/modules/gmac_copro_firmware'. So, not moving it."
 fi
+
+if [ ! -z ${module_load_list} ]
+then
+set -- ${module_load_list}
+while [ $# -gt 0 ]
+do
+	echo ${1} >> ${output_dir}/mnt_debootstrap/etc/modules 2>>/deboostrap_stg2_errors.txt
+	shift
+done
+fi
+
 
 if [ "${use_ramzswap}" = "yes" ]
 then
@@ -438,36 +445,67 @@ cat <<END > /etc/rc.local 2>>/ramzswap_setup_errors.txt
 #
 # By default this script does nothing.
 
-if [ ! -e /dev/ramzswap0 ]
-then
-        mknod /dev/ramzswap0 b 254 0
-fi
-modprobe ${ramzswap_kernel_module_name} num_devices=1 disksize_kb=${ramzswap_size_kb}
+modprobe ${ramzswap_kernel_module_name} num_devices=2 disksize_kb=${ramzswap_size_kb}
 swapon -p 100 /dev/ramzswap0
-/sbin/proled unlock
-/sbin/proled green
+swapon -p 100 /dev/ramzswap1
+mkswap /dev/ramzswap0
+mkswap /dev/ramzswap1
+${led_boot_green}
 exit 0
 END
 
 exit 0" > ${output_dir}/mnt_debootstrap/ramzswap_setup.sh
 chmod +x ${output_dir}/mnt_debootstrap/ramzswap_setup.sh
+elif [ "${use_zram}" = "yes" ]
+then
+echo "#!/bin/sh
+cat <<END > /etc/rc.local 2>>/zram_setup_errors.txt
+#!/bin/sh -e
+#
+# rc.local
+#
+# This script is executed at the end of each multiuser runlevel.
+# Make sure that the script will exit 0 on success or any other
+# value on error.
+#
+# In order to enable or disable this script just change the execution
+# bits.
+#
+# By default this script does nothing.
+
+modprobe ${zram_kernel_module_name} num_devices=2
+sleep 1
+echo ${zram_size_byte} > /sys/block/zram0/disksize
+echo ${zram_size_byte} > /sys/block/zram1/disksize
+mkswap /dev/zram0
+mkswap /dev/zram1
+swapon -p 100 /dev/zram0
+swapon -p 100 /dev/zram1
+${led_boot_green}
+exit 0
+END
+
+exit 0" > ${output_dir}/mnt_debootstrap/zram_setup.sh
+chmod +x ${output_dir}/mnt_debootstrap/zram_setup.sh
 fi
+
 
 date_cur=`date` # needed further down as a very important part to circumvent the PAM Day0 change password problem
 
-echo "#!/bin/sh
+echo "#!/bin/bash
 
-date -s \"${date_cur}\" 2>>/post_deboostrap_errors.txt	# set the system date to prevent PAM from exhibiting its nasty DAY0 forced password change
-apt-get -y --force-yes install ${additional_packages} 2>>/post_deboostrap_errors.txt && apt-get clean	# install the already downloaded packages
+date -s \"${date_cur}\" 2>>/post_debootstrap_errors.txt	# set the system date to prevent PAM from exhibiting its nasty DAY0 forced password change
+apt-get -y --force-yes install ${additional_packages} 2>>/post_debootstrap_errors.txt
+apt-get clean	# install the already downloaded packages
 
-if [ "${use_ramzswap}" = "yes" ]
+if [ "${use_ramzswap}" = "yes" -o "${use_zram}" = "yes" ]
 then
 	echo vm.swappiness=${vm_swappiness} >> /etc/sysctl.conf
 fi
 
 if [ ! -z `grep setup.sh /etc/rc.local` ] # write a clean 'rc.local for the qemu-process'
 then
-	cat <<END > /etc/rc.local 2>>/post_deboostrap_errors.txt
+	cat <<END > /etc/rc.local 2>>/post_debootstrap_errors.txt
 #!/bin/sh -e
 #
 # rc.local
@@ -487,10 +525,10 @@ fi
 
 sh -c \"echo '${root_password}
 ${root_password}
-' | passwd root\" 2>>/post_deboostrap_errors.txt
-passwd -u root 2>>/post_deboostrap_errors.txt
-passwd -x -1 root 2>>/post_deboostrap_errors.txt
-passwd -w -1 root 2>>/post_deboostrap_errors.txt
+' | passwd root\" 2>>/post_debootstrap_errors.txt
+passwd -u root 2>>/post_debootstrap_errors.txt
+passwd -x -1 root 2>>/post_debootstrap_errors.txt
+passwd -w -1 root 2>>/post_debootstrap_errors.txt
 
 sh -c \"echo '${user_password}
 ${user_password}
@@ -501,24 +539,43 @@ ${user_password}
 
 ' | adduser ${username}\" 2>>/post_debootstrap_errors.txt
 
-passwd -u ${username} 2>>/post_deboostrap_errors.txt
-passwd -x -1 ${username} 2>>/post_deboostrap_errors.txt
-passwd -w -1 ${username} 2>>/post_deboostrap_errors.txt
+passwd -u ${username} 2>>/post_debootstrap_errors.txt
+passwd -x -1 ${username} 2>>/post_debootstrap_errors.txt
+passwd -w -1 ${username} 2>>/post_debootstrap_errors.txt
 
 ldconfig
 
 dpkg -l >/installed_packages.txt
-reboot 2>>/post_deboostrap_errors.txt
+reboot 2>>/post_debootstrap_errors.txt
 exit 0" > ${output_dir}/mnt_debootstrap/setup.sh
 
 chmod +x ${output_dir}/mnt_debootstrap/setup.sh
 
 sed_search_n_replace "mkdir /lib/init/rw/sendsigs.omit.d/" "if [ ! -d  /lib/init/rw/sendsigs.omit.d/ ]; then mkdir /lib/init/rw/sendsigs.omit.d/; fi;" "${output_dir}/mnt_debootstrap/etc/init.d/mountkernfs.sh"
 
-sed_search_n_replace "halt -d -f \$netdown \$poweroff \$hddown" "/sbin/proled orange; halt -d -f \$netdown \$poweroff \$hddown" `find ${output_dir}/mnt_debootstrap/etc/rc0.d/ -name K*halt`
-sed_search_n_replace "reboot -d -f -i" "/sbin/proled amber; reboot -d -f -i" `find ${output_dir}/mnt_debootstrap/etc/rc6.d/ -name K*reboot`
-
 sleep 1
+
+if [ ! -z "${extra_files}" ]
+then
+	number=0
+	set -- ${extra_files}
+	while [ $# -gt 0 ]
+	do
+		extra_files_path=${1%/*}
+		extra_files_name=${1##*/}
+		get_n_check_file "${extra_files_path}" "${extra_files_name}" "extra_file"
+		tar_all extract "${output_dir}/tmp/${extra_files_name}" "${output_dir}/mnt_debootstrap"
+		if [ "$?" = "0" ]
+		then
+			fn_my_echo "Successfully extracted '${extra_files_name}' into the created rootfs."
+		else
+			fn_my_echo "ERROR while trying to extract '${extra_files_name}' into the created rootfs!"
+		fi
+		shift
+	done
+else
+	fn_my_echo "Variable 'extra_files' appears to be empty. No additional files extracted into the completed rootfs."
+fi
 
 umount_img all
 if [ "$?" = "0" ]
@@ -526,7 +583,7 @@ then
 	fn_my_echo "Filesystem image file successfully unmounted. Ready to continue."
 else
 	fn_my_echo "Error while trying to unmount the filesystem image. Exiting now!"
-	exit 13
+	exit 50
 fi
 
 sleep 5
@@ -535,10 +592,10 @@ mount |grep "${output_dir}/mnt_debootstrap" > /dev/null
 if [ ! "$?" = "0" ]
 then
 	fn_my_echo "Starting the qemu environment now!"
-	qemu-system-arm -M versatilepb -cpu arm11mpcore -no-reboot -kernel ${output_dir}/qemu-kernel/zImage-qemu -hda ${output_dir}/${output_filename}.img -m 256 -append "root=/dev/sda rootfstype=ext3 mem=256M devtmpfs.mount=0 rw ip=dhcp" 2>qemu_error_log.txt
+	qemu-system-arm -M versatilepb -cpu arm11mpcore -no-reboot -kernel ${output_dir}/qemu-kernel/zImage-qemu -hda ${output_dir}/${output_filename}.img -m 256 -append "root=/dev/sda rootfstype=ext3 mem=256M devtmpfs.mount=0 rw" 2>qemu_error_log.txt
 else
 	fn_my_echo "ERROR! Filesystem is still mounted. Can't run qemu!"
-	exit 14
+	exit 51
 fi
 
 fn_my_echo "Additional chroot system configuration successfully finished!"
@@ -572,8 +629,22 @@ fi
 mount ${output_dir}/${output_filename}.img ${output_dir}/mnt_debootstrap -o loop
 if [ "$?" = "0" ]
 then
-	rm -r ${output_dir}/mnt_debootstrap/lib/modules/2.6.33-gnublin-qemu-*/
+	fn_my_echo "Trying to edit the reboot and halt scripts now, to add LED indicators."
+	sed -i "s/log_action_msg \"Will now halt\"/\\${led_halt_orange}\n\t&/g" ${output_dir}/mnt_debootstrap/etc/init.d/halt  # making the pogoplug's led turn orange on poweroff/shutdown/halt
+	sed -i "s/log_action_msg \"Will now restart\"/\\${led_reboot_amber}\n\t&/g" ${output_dir}/mnt_debootstrap/etc/init.d/reboot # making the pogoplug's led turn amber on reboot
+	
+			
+	fn_my_echo "Removing the 'qemu-arm-static' binary from the rootfs."
+	if [ -e ${output_dir}/mnt_debootstrap/usr/bin/qemu-arm-static ]
+	then
+		rm ${output_dir}/mnt_debootstrap/usr/bin/qemu-arm-static
+	fi
+	
+	fn_my_echo "Removing unneccessary file(s) from the rootfs '/tmp' directory."
+	rm -rf ${output_dir}/mnt_debootstrap/tmp/*
+		
 	cd ${output_dir}/mnt_debootstrap
+	
 	if [ "${tar_format}" = "bz2" ]
 	then
 		tar_all compress "${output_dir}/${output_filename}.tar.${tar_format}" .
@@ -586,7 +657,7 @@ Please check! Only valid entries are 'bz2' or 'gz'. Could not compress the Rootf
 	fi
 
 	cd ${output_dir}
-	sleep 5
+	sleep 3
 else
 	fn_my_echo "ERROR: Image file could not be remounted correctly. Exiting now!"
 	regular_cleanup
@@ -594,7 +665,7 @@ else
 fi
 
 umount ${output_dir}/mnt_debootstrap
-sleep 10
+sleep 3
 mount | grep ${output_dir}/mnt_debootstrap > /dev/null
 if [ ! "$?" = "0" ] && [ "${clean_tmp_files}" = "yes" ]
 then
@@ -605,12 +676,12 @@ elif [ "$?" = "0" ] && [ "${clean_tmp_files}" = "yes" ]
 then
 	fn_my_echo "Directory '${output_dir}/mnt_debootstrap' is still mounted, so it can't be removed. Exiting now!"
 	regular_cleanup
-	exit 15
+	exit 63
 elif [ "$?" = "0" ] && [ "${clean_tmp_files}" = "no" ]
 then
 	fn_my_echo "Directory '${output_dir}/mnt_debootstrap' is still mounted, please check. Exiting now!"
 	regular_cleanup
-	exit 16
+	exit 64
 fi
 
 fn_my_echo "Rootfs successfully DONE!"
@@ -648,18 +719,20 @@ Type anything else and/or hit Enter to cancel!"
 			fn_my_echo "Now partitioning device '${device}'."
 			parted -s ${device} mklabel msdos
 			# first partition = root (rest of the drive size)
-			parted --align=opt -- ${device} unit MB mkpart primary ext3 1 -0
+			parted --align=opt -- ${device} unit MB mkpart primary ext3 1 -256
+			# last partition = swap (128MB)
+			parted -s --align=opt -- ${device} unit MB mkpart primary linux-swap -256 -0
 			echo ">>> ${device} Partition table is now:"
 			parted -s ${device} unit MB print
 		else
 			fn_my_echo "Action canceled by user. Exiting now!"
 			regular_cleanup
-			exit 17
+			exit 70
 		fi
 	else
 		fn_my_echo "ERROR! Some partition on device '${device}' is still mounted. Exiting now!"
 		regular_cleanup
-		exit 18
+		exit 71
 	fi
 else
 	if [ ! -z "${device}" ] # in case of a refresh we don't want to see the error message ;-)
@@ -674,11 +747,12 @@ done
 if [ -e ${device}1 ]
 then
 	mkfs.ext3 ${device}1 # ext3 on root partition
+	mkswap ${device}2 # swap
 else
 	fn_my_echo "ERROR: There should be 1 partition on '${device}', but it seems to be missing.
 Exiting now!"
 	regular_cleanup
-	exit 20
+	exit 72
 fi
 
 sleep 1
@@ -692,8 +766,6 @@ sleep 1
 # Description: Copy rootfs and kernel-modules to the USB-stick and then unmount it
 finalize_disk()
 {
-# Copy bootloader to the boot partition
-
 if [ -e ${device} ] &&  [ "${device:0:5}" = "/dev/" ]
 then
 	umount ${device}*
@@ -718,44 +790,26 @@ then
 				else
 					fn_my_echo "ERROR: File '${output_dir}/${output_filename}.tar.${tar_format}' doesn't seem to exist. Exiting now!"
 					regular_cleanup
-					exit 22
+					exit 80
 				fi
 				sleep 1
-				if [ ! -z ${extra_files} ]
-				then
-					set -- ${extra_files}
-					while [ $# -gt 0 ]
-					do
-						extra_files_path=${1%/*}
-						extra_files_name=${1##*/}
-						get_n_check_file "${extra_files_path}" "${extra_files_name}" "extra_files"
-						tar_all extract "${output_dir}/tmp/${extra_files_name}" "${output_dir}/usb-stick"
-						if [ "$?" = "0" ]
-						then
-							fn_my_echo "Successfully extracted '${extra_files_name}' to '${device}1'."
-						else
-							fn_my_echo "ERROR while trying to extract '${extra_files_name}' to '${device}1' !"
-						fi
-					shift
-					done
-				fi
 			else
 				fn_my_echo "ERROR while trying to mount '${device}1' to '${output_dir}/usb-stick'. Exiting now!"
 				regular_cleanup
-				exit 23
+				exit 81
 			fi
 		else
 			fn_my_echo "ERROR while trying to create the temporary directory '${output_dir}/usb-stick'. Exiting now!"
 			regular_cleanup
-			exit 24
+			exit 82
 		fi
-
+		
 		sleep 3
 		fn_my_echo "Nearly done! Now trying to unmount the usb-stick."
 		umount ${output_dir}/usb-stick
 
 		sleep 3
-
+		fn_my_echo "Now doing a final filesystem check."
 		fsck -fy ${device}1 # final check
 
 		if [ "$?" = "0" ]
@@ -777,7 +831,7 @@ else
 	fn_my_echo "ERROR! Device '${device}' doesn't seem to exist!
 	Exiting now"
 	regular_cleanup
-	exit 21
+	exit 83
 fi
 }
 
@@ -804,12 +858,12 @@ then
 		else
 			fn_my_echo "ERROR! Created files can only be of type '.tar.gz', or '.tar.bz2'! Exiting now!"
 			regular_cleanup
-			exit 40
+			exit 90
 		fi
 	else
 		fn_my_echo "ERROR! Illegal arguments '$2' and/or '$3'. Exiting now!"
 		regular_cleanup
-		exit 41
+		exit 91
 	fi
 elif [ "$1" = "extract" ]
 then
@@ -825,17 +879,17 @@ then
 			fn_my_echo "ERROR! Can only extract files of type '.tar.gz', or '.tar.bz2'!
 '${2}' doesn't seem to fit that requirement. Exiting now!"
 			regular_cleanup
-			exit 42
+			exit 92
 		fi
 	else
 		fn_my_echo "ERROR! Illegal arguments '$2' and/or '$3'. Exiting now!"
 		regular_cleanup
-		exit 43
+		exit 93
 	fi
 else
 	fn_my_echo "ERROR! The first parameter needs to be either 'compress' or 'extract', and not '$1'. Exiting now!"
 	regular_cleanup
-	exit 44
+	exit 94
 fi
 }
 
@@ -928,6 +982,33 @@ fi
 }
 
 
+# Some special treatment for udev
+change_udev_tmpfs_size()
+{
+mount ${output_dir}/${output_filename}.img ${output_dir}/mnt_debootstrap -o loop
+
+if [ -e ${output_dir}/mnt_debootstrap/etc/init.d/udev ] && [ -e ${output_dir}/mnt_debootstrap/etc/init.d/udev-mtab ]
+then
+	fn_my_echo "udev files do exist!"
+	fn_my_echo "Changing UDEV tmpfs_size from 10M to '${udev_tmpfs_size}' , in order to save RAM."
+	for l in udev udev-mtab
+	do
+	grep 'tmpfs_size="10M"' "${output_dir}/mnt_debootstrap/etc/init.d/${l}"
+	if [ "$?" = "0" ]
+	then
+		sed_search_n_replace "tmpfs_size=\"10M\"" "tmpfs_size=\"${udev_tmpfs_size}\"" "${output_dir}/mnt_debootstrap/etc/init.d/${l}" # Change tmpfs size to different value, other than the default 10M. Should be fine for this little system with not much hardware attached and saves RAM!
+	else
+		fn_my_echo "Not editing '${output_dir}/mnt_debootstrap/etc/init.d/${l}'.
+This Udev file does not contain a 'tmpfs_size' setting."
+	fi
+	done
+else
+	fn_my_echo "No udev files found. Maybe udev is not installed?"
+fi 	
+umount_img all
+}
+
+
 # Description: Function to disable all /etc/init.d startup entries that try to mount something as tmpfs
 disable_mnt_tmpfs()
 {
@@ -968,7 +1049,6 @@ END
 else
 	fn_my_echo "No entries found that match both the keywords 'domount' and 'tmpfs'."
 fi
-
 }
 
 
@@ -986,14 +1066,14 @@ Parameter 1 is file_path, parameter 2 is file_name and parameter 3 is short_desc
 Faulty parameters passed were '${1}', '${2}' and '${3}'.
 One or more of these appear to be empty. Exiting now!" 
 	regular_cleanup
-	exit 50
+	exit 100
 fi
 
 if [ "${file_path:0:4}" = "http" ] || [ "${file_path:0:5}" = "https" ] || [ "${file_path:0:3}" = "ftp" ]
 then
 	fn_my_echo "Downloading ${short_description} from address '${file_path}/${file_name}', now."
 	cd ${output_dir}/tmp
-	wget -t 3 ${file_path}/${file_name}
+	wget -t 5 ${file_path}/${file_name}
 	if [ "$?" = "0" ]
 	then
 		fn_my_echo "'${short_description}' successfully downloaded from address '${file_path}/${file_name}'."
@@ -1001,7 +1081,7 @@ then
 		fn_my_echo "ERROR: File '${file_path}/${file_name}' could not be downloaded.
 Exiting now!"
 	regular_cleanup
-	exit 51
+	exit 101
 	fi
 else
 	fn_my_echo "Looking for the ${short_description} locally (offline)."	
@@ -1017,22 +1097,24 @@ else
 			else
 				fn_my_echo "ERROR while trying to link the file! Exiting now."
 				regular_cleanup
-				exit 52
+				exit 102
 			fi
 		else
 			fn_my_echo "ERROR: File '${file_name}' does not seem to be a valid file in existing directory '${file_path}'.Exiting now!"
 			regular_cleanup
-			exit 53
+			exit 103
 		fi
 	else
 		fn_my_echo "ERROR: Folder '${file_path}' does not seem to exist as a local directory. Exiting now!"
 		regular_cleanup
-		exit 54
+		exit 104
 	fi
 fi
 
 }
 
+
+# Description: Helper function to clean up in certain cases, without exiting the script run
 regular_cleanup()
 {
 	umount_img all 2>/dev/null
@@ -1049,6 +1131,6 @@ int_cleanup() # special treatment for script abort through interrupt ('ctrl-c'  
 	umount_img all 2>/dev/null
 	rm -r ${output_dir}/mnt_debootstrap 2>/dev/null
 	rm -r ${output_dir}/tmp 2>/dev/null
-	rm -r ${output_dir}/sd-card 2>/dev/null
-	exit 99
+	rm -r ${output_dir}/usb-stick 2>/dev/null
+	exit 110
 }

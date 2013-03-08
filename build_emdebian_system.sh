@@ -1,11 +1,13 @@
 #!/bin/bash
-# Bash script that creates a Emdebian rootfs (and optional USB stick) for the Pogoplug V3 devices
+# Bash script that creates a Emdebian rootfs (and optional USB stick) for the Pogoplug V3 devices (Pro and classic)
 # Should run on current Debian or Ubuntu versions
 # Author: Ingmar Klein (ingmar.klein@hs-augsburg.de)
 
 
 # This program (including documentation) is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
-# warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License version 3 (GPLv3; http://www.gnu.org/licenses/gpl-3.0.html ) for more details.trap cleanup INT
+# warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License version 3 (GPLv3; http://www.gnu.org/licenses/gpl-3.0.html ) for more details.
+
+# THIS SCRIPT IS ONLY INTENDED FOR THE POGOPLUG V3! CHECK IF YOU REALLY HAVE A MODEL OF THE 3RD SERIES BEFORE USING THIS SCRIPT!
 
 trap int_cleanup INT
 source general_settings.sh # Including settings through an additional file
@@ -43,6 +45,10 @@ then
 		echo "Cleaning both cache and build directories, now!"
 		rm -rf ${output_dir_base}/cache/*
 		rm -rf ${output_dir_base}/build_*
+	else
+		echo "ERROR! The clean option can only be used in conjunction with second parameter 'cache', 'build' or 'all'.
+For more info just run './build_emdebian_system.sh --help' ! Exiting now."
+		exit 1
 	fi
 elif [ \( "$1" = "--build" -o "$1" = "-b" \) -a -z "$2" ]  # case of just wanting to build a compressed rootfs archive
 then
@@ -53,26 +59,9 @@ then
 	
 elif [ \( "$1" = "--install" -o "$1" = "-i" \) -a ! -z "$2" ] # case of wanting to install a existing rootfs-image to sd-card
 then
-	if [ \( "$3" = "--bootloader" -o "$3" = "-bl" \) -a ! -z "$4" ] # case of additionally telling the script directly what bootloader binary to use
-	then
-		if [ -z "$4" ] # case of forgotten parameter for the bootloader
-		then
-			echo "You seem to have called the script with the '--install' AND additional '--bootloader 'parameter.
-'--bootloader' requires the location of the bootloader binary file, as an additional parameter.
-Please rerun the script accordingly.
-For example:
-sudo ./build_debian_system.sh install 'http://www.hs-augsburg.de/~ingmar_k/hackberry/rootfs_packages/debian_rootfs_hackberry.tar.bz2' --bootloader 'http://www.hs-augsburg.de/~ingmar_k/hackberry/bootloader/uboot.bin'
-"
-			exit 1
-		else # case of using a non-default bootloader binary
-			bootloader_bin_path=${4%/*}
-			bootloader_bin_name=${4##*/}
-		fi
-	fi
-
 	prep_output
 	fn_my_echo "Running the script in install-only mode!
-Just creating a complete, fully bootable sd-card."
+Just creating a complete, fully bootable usb-stick."
 	param_1="install"
 	if [ "$2" = "default" ]
 	then
@@ -82,19 +71,19 @@ Just creating a complete, fully bootable sd-card."
 		rootfs_package_path=${2%/*}
 		rootfs_package_name=${2##*/}
 	fi
-	get_n_check_file "${rootfs_package_path}/${rootfs_package_name}" "rootfs_package" "${output_dir}"
+	get_n_check_file "${rootfs_package_path}" "${rootfs_package_name}" "rootfs_package"
 	if [ "${rootfs_package_name:(-8)}" = ".tar.bz2" ]
 	then
 		tar_format="bz2"
-		output_filename="${rootfs_package_name%.tar.bz2}"
+		output_filename="tmp/${rootfs_package_name%.tar.bz2}"
 	elif [ "${rootfs_package_name:(-7)}" = ".tar.gz" ]
 	then
 		tar_format="gz"
-		output_filename="${rootfs_package_name%.tar.gz}"
+		output_filename="tmp/${rootfs_package_name%.tar.gz}"
 	else
 		fn_my_echo "The variable rootfs_package_name seems to point to a file that is neither a '.tar.bz2' nor a '.tar.gz' package.
 Please check! Exiting now."
-		exit 2
+		exit 3
 	fi
 	create_usb_stick
 	regular_cleanup
@@ -107,20 +96,19 @@ Please rerun the script accordingly.
 For example:
 sudo ./build_debian_system.sh --install 'http://www.hs-augsburg.de/~ingmar_k/hackberry/rootfs_packages/debian_rootfs_hackberry.tar.bz2'
 "
-	exit 3
+	exit 4
 else
 	echo "'$0' was called with parameter '$1', which does not seem to be a correct parameter.
 	
 Correct parameters are:
 -----------------------
 Parameter 1: --build OR -b (If you only want to build a compressed rootfs archive for example for later use, according to the settings in 'general_settings.sh'.)
-Parameter 1: --install 'archivename' OR -i 'archivename' (if you only want to create a bootable SD-card with an already existing rootfs-package, tar.bz2 or tar.gz compressed archive)
+Parameter 1: --install 'archivename' OR -i 'archivename' (if you only want to create a bootable usb-stick with an already existing rootfs-package, tar.bz2 or tar.gz compressed archive)
 Parameter 1: --clean all OR --clean build OR --clean cache (The first one cleans both, build and cache directories, while the other two only clean one directory respectively)
-Parameter 2: --bootloader 'binary name' OR -bl 'binary name' (if you want to specify a Bootloader binary directly. It can either be a local file or link to an online source)
 -----------------------
 Besides that you can also run '$0' without any parameters, for the full functionality, according to the settings in 'general_settings'.
 Exiting now!"
-	exit 4
+	exit 5
 fi
 
 exit 0
