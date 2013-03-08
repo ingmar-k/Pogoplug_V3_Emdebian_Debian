@@ -44,7 +44,7 @@ Here is how to do that:
 3. Then run **`'/usr/sbin/flash_erase /dev/mtd1 0xB00000 24'`** to delete the backup image in flash.
 4. By running **`'/usr/sbin/nandwrite -p -s 0xB00000 /dev/mtd1 /path/to/new/uImage'`** you write the newer uImage to flash.
 5. Reboot the Pogoplug and interrupt the boot process at the Uboot prompt( _**CE>>**_ ).
-6. In order to boot the backup kernel image directly, instead of the main image, run **`'run load_custom_nand2 boot'`** (as found in the second half of the **boot_custom** command, shown by running **`printenv`** ) 
+6. In order to boot the backup kernel image directly, instead of the main image, run **`'run load_custom_nand2 boot'`** (as found in the second half of the **boot_custom** command, shown by running **`'printenv'`** ) 
 7. This will boot the backup kernel image **for one time only**. At the next reboot, the default command will be run again.
 8. **Extensively (!!!)** test the kernel before thinking about making it your default kernel!
 9. To make this new kernel the default, repeat steps 3. and 4. with the hex adress **0x500000**, INSTEAD OF **0xB00000**.
@@ -63,10 +63,10 @@ Now that the Pogoplug boots Emdebian from USB, the next possible (but optional) 
 4. Open the filesystem-table used for mounting the Rootfs ( _**../nand_rootfs/etc/fstab**_ ) with an editor (for example **nano**).
 5. Remove the 2 lines **'/dev/root	/	ext3	defaults,noatime	0	1'** and **'/dev/sda2	none	swap	defaults	0	0'**, **replace** them with **'/dev/root	/	ubifs	defaults,noatime	0	0'** and save the file.
 6. Make absolutely sure that the _**nand_rootfs**_-directory includes the needed kernel modules in _**/lib/modules**_ !
-7. To delete the contents of the old rootfs in nand, run the command **`'flash_eraseall /dev/mtd2'`** ( with mtd2 being the rootfs partition according to **`cat /proc/mtd`** ).
+7. To delete the contents of the old rootfs in nand, run the command **`'flash_eraseall /dev/mtd2'`*** ( with mtd2 being the rootfs partition according to **`'cat /proc/mtd'`** ).
 8. Change into a different directory, that is not part of the _**nand_rootfs**_ dir !!!
 9. Create a file called _**ubinize.cfg**_, with the following content:
- 
+
     <b> [ubifs]
     <br> mode=ubi
     <br> image=ubifs.img
