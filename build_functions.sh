@@ -348,7 +348,7 @@ APT::Install-Suggests \"0\";
 END
 
 apt-get -d -y --force-yes install ${additional_packages} 2>>/deboostrap_stg2_errors.txt
-if [ \"pogoplug_v3_version\" = \"pro\"_]
+if [ \"pogoplug_v3_version\" = \"pro\" ]
 then
 	apt-get -d -y --force-yes install firmware-ralink 2>>/deboostrap_stg2_errors.txt
 fi
@@ -496,6 +496,10 @@ echo "#!/bin/bash
 
 date -s \"${date_cur}\" 2>>/post_debootstrap_errors.txt	# set the system date to prevent PAM from exhibiting its nasty DAY0 forced password change
 apt-get -y --force-yes install ${additional_packages} 2>>/post_debootstrap_errors.txt
+if [ \"pogoplug_v3_version\" = \"pro\" ]
+then
+	apt-get -y --force-yes install firmware-ralink 2>>/deboostrap_stg2_errors.txt
+fi
 apt-get clean	# install the already downloaded packages
 
 if [ "${use_ramzswap}" = "yes" -o "${use_zram}" = "yes" ]

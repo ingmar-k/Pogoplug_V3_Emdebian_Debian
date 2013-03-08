@@ -115,14 +115,14 @@ vm_swappiness="100" # Setting for general kernel RAM swappiness: With RAMzswap a
 ##### LED SETTINGS: #####
 #########################
 
-# PLEASE COMMENT OR UNCOMMENT THE SETTINGS FITTING YOUR KERNEL !!!
+## PLEASE COMMENT OR UNCOMMENT THE SETTINGS FITTING YOUR KERNEL !!!
 
-# LED settings for newer, patched kernels (mostly kernel versions 2.6.31-14 or even 3.1.10 or newer)
+## LED settings for newer, patched kernels (mostly kernel versions 2.6.31-14 or even 3.1.10 or newer)
 led_boot_green="echo default-on>/sys/class/leds/status\:health\:green/trigger;"
 led_reboot_amber="echo default-on>\/sys\/class\/leds\/status\\\:fault\\\:orange\/trigger;" # needs to have escaped slahes and backslashes for the neccessary sed operations
 led_halt_orange="echo none>\/sys\/class\/leds\/status\\\:health\\\:green\/trigger;echo default-on>\/sys\/class\/leds\/status\\\:fault\\\:orange\/trigger;" # needs to have escaped slahes and backslashes for the neccessary sed operations
 
-# LED settings for old original kernels (mostly kernel version 2.6.31-6)
+## LED settings for old original kernels (mostly kernel version 2.6.31-6)
 #led_boot_green="/sbin/proled unlock;/sbin/proled green"
 #led_reboot_amber="\/sbin\/proled off;\/sbin\/proled amber" # needs to have escaped slahes and backslashes for the neccessary sed operations
 #led_halt_orange="\/sbin\/proled off;\/sbin\/proled orange" # needs to have escaped slahes and backslashes for the neccessary sed operations

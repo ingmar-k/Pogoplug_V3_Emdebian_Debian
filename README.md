@@ -64,33 +64,25 @@ Now that the Pogoplug boots Emdebian from USB, the next possible (but optional) 
 5. Remove the 2 lines **'/dev/root	/	ext3	defaults,noatime	0	1'** and **'/dev/sda2	none	swap	defaults	0	0'**, **replace** them with **'/dev/root	/	ubifs	defaults,noatime	0	0'** and save the file.
 6. To delete the contents of the old rootfs in nand, run the command **`'flash_eraseall /dev/mtd2'`** ( with mtd2 being the rootfs partition according to **`cat /proc/mtd`** ).
 7. Change into a different directory, that is not part of the **nand_rootfs** dir !!!
-8. Create a file called **ubinize.cfg**, with the following content: 
+8. Create a file called **ubinize.cfg**, with the following content:
+ 
+    <br> [ubifs]
+    <br> mode=ubi
+    <br> image=ubifs.img
+    <br> vol_id=0
+    <br> vol_size=100MiB
+    <br> vol_type=dynamic
+    <br> vol_name=rootfs
+    <br> vol_alignment=1
+    <br> vol_flags=autoresize
 
-    [ubifs]
-    
-    mode=ubi
-    
-    image=ubifs.img
-    
-    vol_id=0
-    
-    vol_size=100MiB
-    
-    vol_type=dynamic
-    
-    vol_name=rootfs
-    
-    vol_alignment=1
-    
-    vol_flags=autoresize
-    
 9. Check your boot log for the UBI entry called **UBI: available PEBs:** and memorize or write down the number ( should be something like '897' ).
 10. Run **`'mkfs.ubifs -r /nand_rootfs -m 2048 -e 129024 -c 897 -x zlib -o ubifs.img'`** with the parameters **fitting your system (very important, the number after '-c' is the one you memorized)**.
 11. Then run **`'ubinize -o ubi.img -m 2048 -p 128KiB -s 512 ubinize.cfg'`** to create the final image, ready to flash.
 12. To flash that image to NAND, you first need to detach second the partition (**mtd2**) from UBI, by running **`'ubidetach /dev/ubi_ctrl -m 2'`** .
 13. Finally flash the created image to NAND by running **`'ubiformat /dev/mtd2 -f ubi.img'`** .
 14. Reboot the Pogoplug and again **interrupt the boot process at the Uboot prompt**.
-15. To boot the system from NAND, run the commmand **`'setenv bootargs $bootargs_stock'`** , followed by **`'run boot_custom'`**.
+15. To boot the system from NAND, run the commmand **`'setenv bootargs $bootargs_stock'` , followed by `'run boot_custom'`**.
 16. This change again is only temporary until the next reboot.
 17. To make the Pogoplug boot from NAND by default, repeat step 14, followed by running **`'saveenv'`** .
 18. Now the Pogoplug should boot to NAND by default.
