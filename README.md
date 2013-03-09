@@ -1,4 +1,3 @@
-
 **This program (including documentation) is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied**
 **warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License version 3 (GPLv3; http://www.gnu.org/licenses/gpl-3.0.html ) for more details.**
 
@@ -85,5 +84,5 @@ Now that the Pogoplug boots Emdebian from USB, the next possible (but optional) 
 15. Reboot the Pogoplug and again **interrupt the boot process at the Uboot prompt**.
 16. To boot the system from NAND, run the commmand **`'setenv bootargs $bootargs_stock'` , followed by `'run boot_custom'`**.
 17. This change again is only temporary until the next reboot.
-18. To make the Pogoplug boot from NAND by default, repeat step 14, followed by running **`'saveenv'`** .
+18. To make the Pogoplug boot from NAND by default, repeat step 16, followed by running **`'saveenv'`** .
 19. Now the Pogoplug should boot to NAND by default.
