@@ -100,7 +100,7 @@ ramzswap_size_kb="32768" # size of each (there are 2) the ramzswap device in KB(
 ramzswap_kernel_module_name="ramzswap" # name of the ramzswap kernel module (could have a different name on newer kernel versions)
 
 
-use_zram="yes" # for Kernels 3.xx only !!! set if you want to use a compressed SWAP space in RAM (can potentionally improve performance)
+use_zram="no" # for Kernels 3.xx only !!! set if you want to use a compressed SWAP space in RAM (can potentionally improve performance)
 
 zram_size_byte="33554432" # size of each (there are 2) the zram device in Bytes(<-- !!!)
 
@@ -118,13 +118,13 @@ vm_swappiness="100" # Setting for general kernel RAM swappiness: With RAMzswap a
 ## PLEASE COMMENT OR UNCOMMENT THE SETTINGS FITTING YOUR KERNEL !!!
 
 ## LED settings for newer, patched kernels (mostly kernel versions 2.6.31-14 or even 3.1.10 or newer)
-led_boot_green="echo default-on>/sys/class/leds/status\:health\:green/trigger;"
-led_reboot_amber="echo default-on>\/sys\/class\/leds\/status\\\:fault\\\:orange\/trigger;" # needs to have escaped slahes and backslashes for the neccessary sed operations
-led_halt_orange="echo none>\/sys\/class\/leds\/status\\\:health\\\:green\/trigger;echo default-on>\/sys\/class\/leds\/status\\\:fault\\\:orange\/trigger;" # needs to have escaped slahes and backslashes for the neccessary sed operations
+#led_boot_green="echo default-on>/sys/class/leds/status\:health\:green/trigger;"
+#led_reboot_amber="echo default-on>\/sys\/class\/leds\/status\\\:fault\\\:orange\/trigger;" # needs to have escaped slahes and backslashes for the neccessary sed operations
+#led_halt_orange="echo none>\/sys\/class\/leds\/status\\\:health\\\:green\/trigger;echo default-on>\/sys\/class\/leds\/status\\\:fault\\\:orange\/trigger;" # needs to have escaped slahes and backslashes for the neccessary sed operations
 
 ## LED settings for old original kernels (mostly kernel version 2.6.31-6)
-#led_boot_green="/sbin/proled unlock;/sbin/proled green"
-#led_reboot_amber="\/sbin\/proled off;\/sbin\/proled amber" # needs to have escaped slahes and backslashes for the neccessary sed operations
-#led_halt_orange="\/sbin\/proled off;\/sbin\/proled orange" # needs to have escaped slahes and backslashes for the neccessary sed operations
+led_boot_green="/sbin/proled unlock;/sbin/proled green"
+led_reboot_amber="\/sbin\/proled off;\/sbin\/proled amber" # needs to have escaped slahes and backslashes for the neccessary sed operations
+led_halt_orange="\/sbin\/proled off;\/sbin\/proled orange" # needs to have escaped slahes and backslashes for the neccessary sed operations
 
 
