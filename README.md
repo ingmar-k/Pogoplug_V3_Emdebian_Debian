@@ -43,7 +43,7 @@ Here is how to do that:
 3. Then run **`'/usr/sbin/flash_erase /dev/mtd1 0xB00000 24'`** to delete the backup image in flash.
 4. By running **`'/usr/sbin/nandwrite -p -s 0xB00000 /dev/mtd1 /path/to/new/uImage'`** you write the newer uImage to flash.
 5. Reboot the Pogoplug and interrupt the boot process at the Uboot prompt( _**CE>>**_ ).
-6. In order to boot the backup kernel image directly, instead of the main image, run **`'run load_custom_nand2 boot'`** (as found in the second half of the **boot_custom** command, shown by running **`'printenv'`** ) 
+6. In order to boot the backup kernel image directly, instead of the main image, run <b>`'run load_custom_nand2 boot'`</b> (as found in the second half of the <b>boot_custom</b> command, shown by running <b>`'printenv'`</b> ) 
 7. This will boot the backup kernel image **for one time only**. At the next reboot, the default command will be run again.
 8. **Extensively (!!!)** test the kernel before thinking about making it your default kernel!
 9. To make this new kernel the default, repeat steps 3. and 4. with the hex adress **0x500000**, INSTEAD OF **0xB00000**.
@@ -62,7 +62,7 @@ Now that the Pogoplug boots Emdebian from USB, the next possible (but optional) 
 4. Open the filesystem-table used for mounting the Rootfs ( _**../nand_rootfs/etc/fstab**_ ) with an editor (for example **nano**).
 5. Remove the 2 lines **'/dev/root	/	ext3	defaults,noatime	0	1'** and **'/dev/sda2	none	swap	defaults	0	0'**, **replace** them with **'/dev/root	/	ubifs	defaults,noatime	0	0'** and save the file.
 6. Make absolutely sure that the _**nand_rootfs**_-directory includes the needed kernel modules in _**/lib/modules**_ !
-7. To delete the contents of the old rootfs in nand, run the command **`'flash_eraseall /dev/mtd2'`*** ( with mtd2 being the rootfs partition according to **`'cat /proc/mtd'`** ).
+7. To delete the contents of the old rootfs in nand, run the command <b>`'flash_eraseall /dev/mtd2'`</b> ( with mtd2 being the rootfs partition according to <b>`'cat /proc/mtd'`</b> ).
 8. Change into a different directory, that is not part of the _**nand_rootfs**_ dir !!!
 9. Create a file called _**ubinize.cfg**_, with the following content:
 
@@ -79,10 +79,10 @@ Now that the Pogoplug boots Emdebian from USB, the next possible (but optional) 
 10. Check your boot log (or via dmesg) for the UBI entry called **UBI: available PEBs:** and memorize or write down the number ( should be something like '897' ).
 11. Run **`'mkfs.ubifs -r /nand_rootfs -m 2048 -e 129024 -c 897 -x zlib -o ubifs.img'`** with the parameters **fitting your system (very important, the number after '-c' is the one you memorized). Check the other parameters, too, to be sure.**
 12. Then run **`'ubinize -o ubi.img -m 2048 -p 128KiB -s 512 ubinize.cfg'`** to create the final image, ready to flash.
-13. To flash that image to NAND, you first need to detach second the partition (**mtd2**) from UBI, by running **`'ubidetach /dev/ubi_ctrl -m 2'`** .
+13. To flash that image to NAND, you first need to detach second the partition (<b>mtd2</b>) from UBI, by running **`'ubidetach /dev/ubi_ctrl -m 2'`** .
 14. Finally flash the created image to NAND by running **`'ubiformat /dev/mtd2 -f ubi.img'`** .
 15. Reboot the Pogoplug and again **interrupt the boot process at the Uboot prompt**.
-16. To boot the system from NAND, run the commmand **`'setenv bootargs $bootargs_stock'` , followed by `'run boot_custom'`**.
+16. To boot the system from NAND, run the commmand <b>`'setenv bootargs $bootargs_stock'`</b> , followed by <b>`'run boot_custom'`</b>.
 17. This change again is only temporary until the next reboot.
-18. To make the Pogoplug boot from NAND by default, repeat step 16, followed by running **`'saveenv'`** .
+18. To make the Pogoplug boot from NAND by default, run <b>`'setenv bootargs $bootargs_stock'`</b> at the Uboot prompt again, followed followed by running <b>`'saveenv'`</b> .
 19. Now the Pogoplug should boot to NAND by default.
