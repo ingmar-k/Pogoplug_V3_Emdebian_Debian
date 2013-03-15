@@ -26,7 +26,7 @@ user_password="tester" # the users password
 
 nameserver_addr="192.168.2.1" # "141.82.48.1" (YOU NEED TO EDIT THIS!)
 
-ip_type="dhcp" # set this either to 'dhcp' (default) or to a 'static'
+ip_type="dhcp" # set this either to 'dhcp' (default) or to 'static'
 
 static_ip="192.168.2.100" # you only need to set this, if ip-type is NOT set to 'dhcp', but to 'static'
 
@@ -59,7 +59,7 @@ extra_files="http://www.hs-augsburg.de/~ingmar_k/Pogoplug_V3/extra_files/pogoplu
 
 debian_mirror_url="http://ftp.uk.debian.org/emdebian/grip" # mirror for debian
 
-debian_target_version="stable" # The version of debian that you want to build (ATM, 'squeeze', 'wheezy' and 'sid' are supported)
+debian_target_version="stable" # The version of debian that you want to build (ATM only 'squeeze'/'stable' is supported)
 
 debian_target_repos="main java"  # select which repository parts to enable for apt; ATM possible parts are: 'main debug dev doc java'
 
