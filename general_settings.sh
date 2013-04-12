@@ -21,7 +21,7 @@ output_dir_base="/home/tester/pogoplug_v3_emdebian_build" # this is where the sc
 
 root_password="root" # root users password
 
-username="tester"  # Name of user for the graphical login
+username="tester"  # Name of the standard (non-root) user
 user_password="tester" # the users password
 
 nameserver_addr="192.168.2.1" # "141.82.48.1" (YOU NEED TO EDIT THIS!)
