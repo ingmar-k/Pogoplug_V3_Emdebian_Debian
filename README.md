@@ -5,16 +5,22 @@
 **I take absolutely no responsibility for any damage(s) that you might cause to your hard- or software-environment by following the descriptions below!**
 
 
-Pogoplug_V3_Emdebian
-====================
+<h1>Pogoplug_V3_Emdebian</h1>
+
 
 Scripts to create a bootable Emdebian USB-Stick for the Pogoplug V3 devices.
 
-ATTENTION:
-==========
-**A serial connection to the Pogoplug is highly recommended for this procedure.**
+<br>
+<h2>ATTENTION:</h2>
+<ol>
+<b><li>A serial connection to the Pogoplug is highly recommended for this procedure. Debugging is more or less impossible without it!</li>
 
-**Most of the descriptions below assume that you are able to connect to the Pogoplug via serial connection!!!**
+<li>Most of the descriptions below assume that you are able to connect to the Pogoplug via serial connection!!!</li>
+
+<li>A working internet connection is necessary RIGHT AWAY when running the script! So please make sure to be connected before starting the script.</li>
+</b></ol>
+<br>
+<br>
 
 HOWTO: Emdebian on the Pogoplug V3 (Classic and/or Pro)
 ------------------
@@ -29,8 +35,16 @@ Step-by-step description on how to get Emdebian runnning on your Pogogplug V3:
 6. When the script is done, boot your Pogoplug Classic/Pro with the newly created USB-drive attached.
 7. If everything went well, the Plug should boot fine and be accessible via SSH (if you installed the package --> _**general_settings.sh**_ ).
 
+DEBUGGING:
+----------
 
-
+There are several log files that get created while running the script.
+The main one, <b><i>log.txt</b></i> can be found under <b><i>${output_dir}/log.txt</b></i>, where <b><i>${output_dir}</b></i> is a variable that you set in the file <b><i>general_settings.sh</b></i>.
+<p>
+Several other log and error-log files get created in the root directory of the target-rootfs (the root filesystem that the script creates). If you need to find an error, have a look there, too.
+If the script comes that far, you can find the files in the output-archive (hint: <b><i>${output_dir}/${output_filename}</b></i>, as set in <b><i>general_settings.sh</b></i> ) that the script creates.
+<br>If the error occurs before the creation of the output-archive, you might want to set the option <b><i>clean_tmp_files</b></i> in the <b><i>general_settings.sh</b></i> to <b><i>no</b></i>. This will cause the script to KEEP the temporary image file that is used for the rootfs creation. In order to debug you can then mount that very image file via loop, after the script failed. 
+<br><br>
 Flashing and testing a new kernel
 -----------------
 
