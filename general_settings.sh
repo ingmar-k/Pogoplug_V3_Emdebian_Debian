@@ -13,18 +13,18 @@
 
 pogoplug_v3_version="classic" # either 'classic' or 'pro' (the pro features integrated wireless lan, the classic does NOT)
 
-pogoplug_mac_address="00:00:00:00:00:00" # !!!VERY IMPORTANT!!! (YOU NEED TO EDIT THIS!)
+pogoplug_mac_address="00:00:00:00:00:00" # !!!VERY IMPORTANT!!! (YOU NEED TO EDIT THIS!) Without a valid MAC address, your device won't be accessible via LAN
 
 host_os="Ubuntu" # Debian or Ubuntu (YOU NEED TO EDIT THIS!)
 
-output_dir_base="/home/tester/pogoplug_v3_emdebian_build" # this is where the script's output files will be placed (YOU NEED TO EDIT THIS!)
+output_dir_base="/home/tester/pogoplug_v3_emdebian_build" # this is a arbitrary local directory on the development machine, running Ubuntu or Debian, where the script's output files will be placed (YOU NEED TO EDIT THIS!)
 
 root_password="root" # root users password
 
-username="tester"  # Name of the standard (non-root) user
-user_password="tester" # the users password
+username="tester"  # Name of the standard (non-root) user for creation on the target emdebian system
+user_password="tester" # the users password on the emdebian system
 
-nameserver_addr="192.168.2.1" # "141.82.48.1" (YOU NEED TO EDIT THIS!)
+nameserver_addr="192.168.2.1" # "141.82.48.1" (YOU NEED TO EDIT THIS!) Needed for the qemu-environment to work properly.
 
 ip_type="dhcp" # set this either to 'dhcp' (default) or to 'static'
 
