@@ -13,11 +13,11 @@ Scripts to create a bootable Emdebian USB-Stick for the Pogoplug V3 devices.
 <br>
 <h2>ATTENTION:</h2>
 <ol>
-<b><li>A serial connection to the Pogoplug is highly recommended for this procedure. Debugging is more or less impossible without it!</li>
+<li>A <b>SERIAL CONNECTION</b> to the Pogoplug is <b>HIGHLY RECOMMENDED</b> for this procedure.<br><i><b>Debugging is more or less impossible without it!</b></i></li><br>
 
-<li>Most of the descriptions below assume that you are able to connect to the Pogoplug via serial connection!!!</li>
+<li><b>Most of the descriptions below assume that you are able to connect to the Pogoplug via serial connection!!!</b></li><br>
 
-<li>A working internet connection is necessary RIGHT AWAY when running the script! So please make sure to be connected before starting the script.</li>
+<li>A <b>working INTERNET CONNECTION</b> is <b>mandatory</b> and <b>must be available RIGHT AWAY</b> when running the script! So please make sure to be connected <b>before starting the script.</b></li>
 </b></ol>
 <br>
 <br>
@@ -64,7 +64,7 @@ Here is how to do that:
 10. The Pogoplug will then boot to the new kernel by default.
 
 
-
+<br>
 Root-filesystem in NAND
 -----------------
 
