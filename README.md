@@ -45,6 +45,46 @@ Several other log and error-log files get created in the root directory of the t
 If the script comes that far, you can find the files in the output-archive (hint: <b><i>${output_dir}/${output_filename}</b></i>, as set in <b><i>general_settings.sh</b></i> ) that the script creates.
 <br>If the error occurs before the creation of the output-archive, you might want to set the option <b><i>clean_tmp_files</b></i> in the <b><i>general_settings.sh</b></i> to <b><i>no</b></i>. This will cause the script to KEEP the temporary image file that is used for the rootfs creation. In order to debug you can then mount that very image file via loop, after the script failed. 
 <br><br>
+
+Running the script with call parameters (special functions)
+--------------------------------------------------------------
+
+The script at the moment accepts three main call parameters.
+These are **"build"**, **"install".** and **"clean"**.
+
+Descriptions:
+
+**build** : This only runs the script's functions to build a new rootfs including kernel, but does not create a bootable USB drive (USB-stick). It is meant for those creating rootfs-archives for others to use, with known-to-work configurations.
+
+**install** : Opposite of "build"!
+It will just download/copy/link a prebuilt rootfs-archive + bootloader and will create a bootable USB drive using these files. This is meant for people not familiar with the build specifics who just want to create a SD-card with known-to-work rootfs configurations.
+The "install" parameter, however **REQUIRES** a valid second parameter, to work properly.
+You need to pass the complete path+filename of a compressed (.tar.gz or .tar.bz2) rootfs-archive of your choice on to the script. The archive can be located online (for example 'http://www.tester.com/rootfs.tar.bz2' ) or on your local storage (for example '/home/tester/rootfs.tar.bz2' ). The script should be able to handle both cases just fine.
+
+**clean** : Cleanup the build directory
+This option is used to delete either the files located in the **cache** or **build** directories, or even in both.
+As the script knows caching of apt-packages, it might sometimes be necessary to delete the old cache files before starting a new build. That's what **--clean cache** would be for. Respectively, **--clean build** would only delete the files and folders in the build directory and **--clean all** would do both.
+
+
+**Usage examples:**
+
+**`sudo ./build_emdebian_system.sh --build`**  will run only the scripts build funtions to create a rootfs-archive according to your settings.
+
+**`sudo ./build_emdebian_system.sh --install http://www.tester.com/rootfs.tar.bz2`** will download the named rootfs-archive and create a bootable SD-card with it (bootloader as set per "general_settings.sh")
+
+**`sudo ./build_emdebian_system.sh --build`**  will run only the scripts build funtions to create a rootfs-archive according to your settings.
+
+**`sudo ./build_emdebian_system.sh --clean all`**  will delete both the files in the build and cache directories.
+
+**`sudo ./build_emdebian_system.sh --clean cache`**  will only delete the files in the cache directory.
+
+**`sudo ./build_emdebian_system.sh --clean build`**  will only delete the files in the build directory.
+
+
+**Any wrong parameter leads to an error message and a short help text, explaining the valid usage options.**
+
+
+<br><br>
 Flashing and testing a new kernel
 -----------------
 
