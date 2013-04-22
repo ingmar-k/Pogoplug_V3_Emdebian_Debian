@@ -68,9 +68,11 @@ As the script knows caching of apt-packages, it might sometimes be necessary to 
 
 **Usage examples:**
 
-**`sudo ./build_emdebian_system.sh --build`**  will run only the scripts build funtions to create a rootfs-archive according to your settings.
+**`sudo ./build_emdebian_system.sh --build`**  will run only the scripts build funtions to create a rootfs-archive according to your settings (NO USB drive creation!).
 
-**`sudo ./build_emdebian_system.sh --install http://www.tester.com/rootfs.tar.bz2`** will download the named rootfs-archive and create a bootable SD-card with it (bootloader as set per "general_settings.sh")
+**`sudo ./build_emdebian_system.sh --install http://www.tester.com/rootfs.tar.bz2`** will download the named rootfs-archive and create a bootable USB drive with it.
+
+**`sudo ./build_emdebian_system.sh --install /local/path/to/rootfs.tar.bz2`** will create a bootable USB drive, using the local rootfs-archive that you set.
 
 **`sudo ./build_emdebian_system.sh --build`**  will run only the scripts build funtions to create a rootfs-archive according to your settings.
 
