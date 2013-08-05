@@ -17,7 +17,7 @@ pogoplug_mac_address="00:00:00:00:00:00" # !!!VERY IMPORTANT!!! (YOU NEED TO EDI
 
 host_os="Ubuntu" # Debian or Ubuntu (YOU NEED TO EDIT THIS!)
 
-output_dir_base="/home/tester/pogoplug_v3_emdebian_build" # this is a arbitrary local directory on the development machine, running Ubuntu or Debian, where the script's output files will be placed (YOU NEED TO EDIT THIS!)
+output_dir_base="/home/`logname`/pogoplug_v3_emdebian_build" # this is a arbitrary local directory on the development machine, running Ubuntu or Debian, where the script's output files will be placed (YOU NEED TO EDIT THIS!)
 
 root_password="root" # root users password
 
@@ -38,7 +38,7 @@ pogo_hostname="pogoplug-emdebian" # Name that the Emdebian system uses to identi
 
 additional_packages="emdebian-archive-keyring samba samba-common mtd-utils udev ntp netbase module-init-tools nano bzip2 unzip zip screen less usbutils psmisc procps dhcp3-client ifupdown iputils-ping wget net-tools ssh hdparm" # List of packages (each seperated by a single space) that get added to the rootfs
 
-module_load_list="" # add names of modules (for example wireless, leds ...) here that should be loaded by /etc/modules (list them, seperated by a single blank space)
+module_load_list="mii gmac" # add names of modules (for example wireless, leds ...) here that should be loaded by /etc/modules (list them, seperated by a single blank space)
 
 
 #############################
@@ -59,7 +59,7 @@ extra_files="http://www.hs-augsburg.de/~ingmar_k/Pogoplug_V3/extra_files/pogoplu
 
 debian_mirror_url="http://ftp.uk.debian.org/emdebian/grip" # mirror for debian
 
-debian_target_version="stable" # The version of debian that you want to build (ATM only 'squeeze'/'stable' is supported)
+debian_target_version="stable-grip" # The version of debian that you want to build (ATM only 'squeeze'/'stable' is supported)
 
 debian_target_repos="main java"  # select which repository parts to enable for apt; ATM possible parts are: 'main debug dev doc java'
 
@@ -77,7 +77,7 @@ work_image_size_MB=512 # size of the temporary image file, in which the installa
 
 apt_prerequisites_debian="debootstrap binfmt-support qemu-user-static qemu qemu-kvm qemu-system parted emdebian-archive-keyring" # packages that need to be installed on a debian system in order to create a emdebian rootfs for the pogoplug
 
-apt_prerequisites_ubuntu="debootstrap binfmt-support qemu qemu-system qemu-kvm qemu-kvm-extras-static parted emdebian-archive-keyring" # packages that need to be installed on a ubuntu system in order to create a emdebian rootfs for the pogoplug
+apt_prerequisites_ubuntu="debootstrap binfmt-support qemu qemu-system qemu-kvm qemu-user-static parted emdebian-archive-keyring" # packages that need to be installed on a ubuntu system in order to create a emdebian rootfs for the pogoplug
 
 clean_tmp_files="yes" # delete the temporary files, when the build process is done? yes or no
 
@@ -107,7 +107,7 @@ zram_size_byte="33554432" # size of each (there are 2) the zram device in Bytes(
 zram_kernel_module_name="zram" # name of the ramzswap kernel module (could have a different name on newer kernel versions)
 
 
-vm_swappiness="100" # Setting for general kernel RAM swappiness: With RAMzswap and low RAM, a high number (like 100) could be good. Default in Linux mostly is 60.
+vm_swappiness="75" # Setting for general kernel RAM swappiness: With RAMzswap and low RAM, a high number (like 100) could be good. Default in Linux mostly is 60.
 
 
 

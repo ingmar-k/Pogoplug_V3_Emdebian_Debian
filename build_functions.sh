@@ -102,9 +102,46 @@ fn_my_echo()
 }
 
 
+# Description: Function that checks if the needed internet connectivity is there.
+check_connectivity()
+{
+fn_my_echo "Checking internet connectivity, which is mandatory for the next step."
+for i in {1..3}
+do
+	for i in debian.org google.com kernel.org
+	do
+		ping -c 5 ${i}
+		if [ "$?" = "0" ]
+		then 
+			fn_my_echo "Pinging '${i}' worked. Internet connectivity seems fine."
+			done=1
+			break
+		else
+			fn_my_echo "ERROR! Pinging '${i}' did NOT work. Internet connectivity seems bad or you are not connected.
+	Please check, if in doubt!"
+			if [ "${i}" = "kernel.org" ]
+			then
+				fn_my_echo "ERROR! All 3 ping attempts failed! You do not appear to be connected to the internet.
+	Exiting now!"
+				exit 97
+			else	
+				continue
+			fi
+		fi
+	done
+if [ "${done}" = "1" ]
+then
+	break
+fi
+done
+}
+
+
 # Description: See if the needed packages are installed and if the versions are sufficient
 check_n_install_prerequisites()
 {
+check_connectivity	
+	
 fn_my_echo "Installing some packages, if needed."
 if [ "${host_os}" = "Debian" ]
 then
@@ -232,6 +269,18 @@ fn_my_echo "Function 'create_n_mount_temp_image_file' DONE."
 # Description: Run the debootstrap steps, like initial download, extraction plus configuration and setup
 do_debootstrap()
 {
+check_connectivity
+
+if [ ! -e /usr/share/debootstrap/scripts/${debian_target_version} ]
+then
+	fn_my_echo "Creating a symlink now, in order to make debootstrap work."
+	ln -s /usr/share/debootstrap/scripts/${debian_target_version%-grip} /usr/share/debootstrap/scripts/${debian_target_version}
+	if [ "$?" = "0" ]
+	then
+		fn_my_echo "Debootstrap script symlink successfully created!"
+	fi
+fi
+
 fn_my_echo "Running first stage of debootstrap now."
 debootstrap --verbose --no-check-gpg --arch armel --variant=minbase --foreign ${debian_target_version} ${output_dir}/mnt_debootstrap ${debian_mirror_url}
 if [ "$?" = "0" ]
@@ -417,9 +466,9 @@ else
 	fn_my_echo "Could not find '${output_dir}/mnt_debootstrap/lib/modules/gmac_copro_firmware'. So, not moving it."
 fi
 
-if [ ! -z ${module_load_list} ]
+if [ ! -z "${module_load_list}" ]
 then
-set -- ${module_load_list}
+set -- "${module_load_list}"
 while [ $# -gt 0 ]
 do
 	echo ${1} >> ${output_dir}/mnt_debootstrap/etc/modules 2>>/deboostrap_stg2_errors.txt
@@ -901,15 +950,21 @@ fi
 # Description: Helper function to completely or partially unmount the image file when and where needed
 umount_img()
 {
+cd ${output_dir}
 if [ "${1}" = "sys" ]
 then
 	mount | grep "${output_dir}" > /dev/null
 	if [ "$?" = "0"  ]
 	then
 		fn_my_echo "Virtual Image still mounted. Trying to umount now!"
-		umount ${output_dir}/mnt_debootstrap/sys > /dev/null
-		umount ${output_dir}/mnt_debootstrap/dev/pts > /dev/null
 		umount ${output_dir}/mnt_debootstrap/proc > /dev/null
+		sleep 3
+		umount ${output_dir}/mnt_debootstrap/dev/pts > /dev/null
+		sleep 3
+		umount ${output_dir}/mnt_debootstrap/dev/ > /dev/null
+		sleep 3
+		umount ${output_dir}/mnt_debootstrap/sys > /dev/null
+		sleep 3
 	fi
 
 	mount | egrep '(${output_dir}/mnt_debootstrap/sys|${output_dir}/mnt_debootstrap/proc|${output_dir}/mnt_debootstrap/dev/pts)' > /dev/null
@@ -925,10 +980,16 @@ then
 	if [ "$?" = "0"  ]
 	then
 		fn_my_echo "Virtual Image still mounted. Trying to umount now!"
-		umount ${output_dir}/mnt_debootstrap/sys > /dev/null
-		umount ${output_dir}/mnt_debootstrap/dev/pts > /dev/null
 		umount ${output_dir}/mnt_debootstrap/proc > /dev/null
+		sleep 3
+		umount ${output_dir}/mnt_debootstrap/dev/pts > /dev/null
+		sleep 3
+		umount ${output_dir}/mnt_debootstrap/dev/ > /dev/null
+		sleep 3
+		umount ${output_dir}/mnt_debootstrap/sys > /dev/null
+		sleep 3
 		umount ${output_dir}/mnt_debootstrap/ > /dev/null
+		sleep 3
 	fi
 
 	mount | grep "${output_dir}" > /dev/null
@@ -941,6 +1002,7 @@ then
 else
 	fn_my_echo "ERROR! Wrong parameter. Only 'sys' and 'all' allowed when calling 'umount_img'."
 fi
+cd ${output_dir}
 }
 
 
@@ -1075,6 +1137,7 @@ fi
 
 if [ "${file_path:0:4}" = "http" ] || [ "${file_path:0:5}" = "https" ] || [ "${file_path:0:3}" = "ftp" ]
 then
+	check_connectivity
 	fn_my_echo "Downloading ${short_description} from address '${file_path}/${file_name}', now."
 	cd ${output_dir}/tmp
 	wget -t 5 ${file_path}/${file_name}
