@@ -300,7 +300,7 @@ then
 	then
 		if [ -e "${output_dir_base}/cache/${base_sys_cache_tarball}" ]
 		then
-			fn_log_echo "Using debian debootstrap tarball '${output_dir_base}/cache/${base_sys_cache_tarball}' from cache."
+			fn_log_echo "Using emdebian/debian debootstrap tarball '${output_dir_base}/cache/${base_sys_cache_tarball}' from cache."
 			debootstrap --foreign --keyring=/usr/share/keyrings/${build_target}-archive-keyring.gpg --unpack-tarball="${output_dir_base}/cache/${base_sys_cache_tarball}" --include=${deb_add_packages} --verbose --arch=armel --variant=minbase "${build_target_version}" "${qemu_mnt_dir}/" "${target_mirror_url}"
 		else
 			fn_log_echo "No debian debootstrap tarball found in cache. Creating one now!"
@@ -417,8 +417,8 @@ if [ "${use_cache}" = "yes" ]
 then
 	if [ -e ${output_dir_base}/cache/additional_packages.tar.bz2 ]
 	then
-		fn_log_echo "Extracting the additional packages 'additional_packages.tar.gz' from cache. now."
-		tar_all extract "${output_dir_base}/cache/additional_packages.tar.gz" "${qemu_mnt_dir}/var/cache/apt/" 
+		fn_log_echo "Extracting the additional packages 'additional_packages.tar.bz2' from cache. now."
+		tar_all extract "${output_dir_base}/cache/additional_packages.tar.bz2" "${qemu_mnt_dir}/var/cache/apt/" 
 	elif [ ! -e "${output_dir}/cache/additional_packages.tar.bz2" ]
 	then
 		fn_log_echo "No compressed additional_packages archive found in cache directory.
@@ -483,7 +483,7 @@ fi
 
 if [ "${add_pack_create}" = "yes" ]
 then
-	fn_log_echo "Compressing additional packages, in order to save in the cache directory."
+	fn_log_echo "Compressing additional packages, in order to save them in the cache directory."
 	cd ${qemu_mnt_dir}/var/cache/apt/
 	tar_all compress "${output_dir_base}/cache/additional_packages.tar.bz2" .
 	fn_log_echo "Successfully created compressed cache archive of additional packages."
@@ -504,14 +504,36 @@ do_post_debootstrap_config()
 fn_log_echo "Now starting the post-debootstrap configuration steps."
 mkdir -p ${output_dir}/qemu-kernel
 
-get_n_check_file "${std_kernel_pkg}" "standard_kernel" "${output_dir}/tmp"
+if [ "${use_cache}" = "yes" ]
+then
+	if [ -e ${output_dir_base}/cache/${std_kernel_pkg##*/} ]
+	then
+		fn_log_echo "Found standard kernel package in cache. Just linking it locally now."
+		ln -s ${output_dir_base}/cache/${std_kernel_pkg##*/} ${output_dir}/tmp/${std_kernel_pkg##*/}
+	else
+		fn_log_echo "Standard kernel package NOT found in cache. Getting it now and copying it to cache."
+		get_n_check_file "${std_kernel_pkg}" "standard_kernel" "${output_dir}/tmp"
+		cp ${output_dir}/tmp/${std_kernel_pkg##*/} ${output_dir_base}/cache/
+	fi
+	if [ -e ${output_dir_base}/cache/${qemu_kernel_pkg##*/} ]
+	then
+		fn_log_echo "Found qemu kernel package in cache. Just linking it locally now."
+		ln -s ${output_dir_base}/cache/${qemu_kernel_pkg##*/} ${output_dir}/tmp/${qemu_kernel_pkg##*/}
+	else
+		fn_log_echo "Qemu kernel package NOT found in cache. Getting it now and copying it to cache."
+		get_n_check_file "${qemu_kernel_pkg}" "qemu_kernel" "${output_dir}/tmp"
+		cp ${output_dir}/tmp/${qemu_kernel_pkg##*/} ${output_dir_base}/cache/
+	fi
+else	
+	get_n_check_file "${std_kernel_pkg}" "standard_kernel" "${output_dir}/tmp"
+	get_n_check_file "${qemu_kernel_pkg}" "qemu_kernel" "${output_dir}/tmp"
+fi
 
-get_n_check_file "${qemu_kernel_pkg}" "qemu_kernel" "${output_dir}/tmp"
+	tar_all extract "${output_dir}/tmp/${qemu_kernel_pkg##*/}" "${output_dir}/qemu-kernel"
+	sleep 1
+	tar_all extract "${output_dir}/tmp/${std_kernel_pkg##*/}" "${qemu_mnt_dir}"
+	sleep 1
 
-tar_all extract "${output_dir}/tmp/${qemu_kernel_pkg##*/}" "${output_dir}/qemu-kernel"
-sleep 1
-tar_all extract "${output_dir}/tmp/${std_kernel_pkg##*/}" "${qemu_mnt_dir}"
-sleep 1
 if [ -d ${output_dir}/qemu-kernel/lib/ ]
 then
 	cp -ar ${output_dir}/qemu-kernel/lib/ ${qemu_mnt_dir}  # copy the qemu kernel modules intot the rootfs
@@ -726,7 +748,21 @@ then
 	while [ $# -gt 0 ]
 	do
 		extra_files_name=${1##*/}
-		get_n_check_file "${1}" "${extra_files_name}" "${output_dir}/tmp"
+		if [ "${use_cache}" = "yes" ]
+		then
+			if [ -e ${output_dir_base}/cache/${extra_files_name} ]
+			then
+				fn_log_echo "Found extra file '${extra_files_name}' in cache. Just linking it locally now."
+				ln -s ${output_dir_base}/cache/${extra_files_name} ${output_dir}/tmp/${extra_files_name}
+			else
+				fn_log_echo "Extra file '${extra_files_name}' NOT found in cache. Getting it now and copying it to cache."
+				get_n_check_file "${1}" "${extra_files_name}" "${output_dir}/tmp"
+				cp ${output_dir}/tmp/${extra_files_name} ${output_dir_base}/cache/
+			fi
+		else
+			get_n_check_file "${1}" "${extra_files_name}" "${output_dir}/tmp"
+		fi
+		
 		tar_all extract "${output_dir}/tmp/${extra_files_name}" "${output_dir}/mnt_debootstrap"
 		if [ "$?" = "0" ]
 		then
@@ -1062,17 +1098,17 @@ umount_img()
 cd ${output_dir}
 if [ "${1}" = "sys" ]
 then
-	mount | grep "${output_dir}" > /dev/null
+	mount | grep "${output_dir}" >/dev/null
 	if [ "$?" = "0"  ]
 	then
 		fn_log_echo "Virtual Image still mounted. Trying to umount now!"
-		umount ${qemu_mnt_dir}/proc > /dev/null
+		umount ${qemu_mnt_dir}/proc 2>/dev/null
 		sleep 3
-		umount ${qemu_mnt_dir}/dev/pts > /dev/null
+		umount ${qemu_mnt_dir}/dev/pts 2>/dev/null
 		sleep 3
-		umount ${qemu_mnt_dir}/dev/ > /dev/null
+		umount ${qemu_mnt_dir}/dev/ 2>/dev/null
 		sleep 3
-		umount ${qemu_mnt_dir}/sys > /dev/null
+		umount ${qemu_mnt_dir}/sys 2>/dev/null
 		sleep 3
 	fi
 
@@ -1085,23 +1121,23 @@ then
 	fi
 elif [ "${1}" = "all" ]
 then
-	mount | grep "${output_dir}" > /dev/null
+	mount | grep "${output_dir}" >/dev/null
 	if [ "$?" = "0"  ]
 	then
 		fn_log_echo "Virtual Image still mounted. Trying to umount now!"
-		umount ${qemu_mnt_dir}/proc > /dev/null
+		umount ${qemu_mnt_dir}/proc 2>/dev/null
 		sleep 3
-		umount ${qemu_mnt_dir}/dev/pts > /dev/null
+		umount ${qemu_mnt_dir}/dev/pts 2>/dev/null
 		sleep 3
-		umount ${qemu_mnt_dir}/dev/ > /dev/null
+		umount ${qemu_mnt_dir}/dev/ 2>/dev/null
 		sleep 3
-		umount ${qemu_mnt_dir}/sys > /dev/null
+		umount ${qemu_mnt_dir}/sys 2>/dev/null
 		sleep 3
-		umount ${qemu_mnt_dir}/ > /dev/null
+		umount ${qemu_mnt_dir}/ 2>/dev/null
 		sleep 3
 	fi
 
-	mount | grep "${output_dir}" > /dev/null
+	mount | grep "${output_dir}" >/dev/null
 	if [ "$?" = "0"  ]
 	then
 		fn_log_echo "ERROR! Something went wrong. '${output_dir}' should have been unmounted, but isn't."
