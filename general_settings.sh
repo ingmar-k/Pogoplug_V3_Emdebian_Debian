@@ -1,30 +1,42 @@
 #!/bin/bash
+# Bash script that creates a Debian or Emdebian rootfs or even a complete USB thumb drive a Pogoplug V3 device
+# Should run on current Debian or Ubuntu versions
 # Author: Ingmar Klein (ingmar.klein@hs-augsburg.de)
-# Additional part of the main script 'build_debian_system.sh', that contains all the general settings
+# Additional part of the main script 'build__emdebian_debian_system.sh', that contains all the general settings
 
 # This program (including documentation) is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
-# warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License version 3 (GPLv3; http://www.gnu.org/licenses/gpl-3.0.html ) for more details.
+# warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License version 3 (GPLv3; http://www.gnu.org/licenses/gpl-3.0.html )
+# for more details.
 
-# THIS SCRIPT IS ONLY INTENDED FOR THE POGOPLUG V3! CHECK IF YOU REALLY HAVE A MODEL OF THE 3RD SERIES BEFORE USING THIS SCRIPT!
+###################################
+##### GENERAL BUILD SETTINGS: #####
+###################################
 
-###########################################
-##### SETTINGS THAT YOU NEED TO EDIT: #####
-###########################################
+### These settings MUST be checked/edited ###
+build_target="emdebian" # possible settings are either 'debian' or 'emdebian'
+build_target_version="wheezy" # The version of debian/emdebian that you want to build (ATM wheezy is the stable version)
+target_mirror_url="http://ftp.uk.debian.org/emdebian/grip" # mirror address for debian or emdebian
+target_repositories="main" # what repos to use in the sources.list (for example 'main contrib non-free' for Debian)
 
 pogoplug_v3_version="classic" # either 'classic' or 'pro' (the pro features integrated wireless lan, the classic does NOT)
-
 pogoplug_mac_address="00:00:00:00:00:00" # !!!VERY IMPORTANT!!! (YOU NEED TO EDIT THIS!) Without a valid MAC address, your device won't be accessible via LAN
 
 host_os="Ubuntu" # Debian or Ubuntu (YOU NEED TO EDIT THIS!)
 
-output_dir_base="/home/`logname`/pogoplug_v3_emdebian_build" # this is a arbitrary local directory on the development machine, running Ubuntu or Debian, where the script's output files will be placed (YOU NEED TO EDIT THIS!)
+nameserver_addr="192.168.2.1" # "141.82.48.1" (YOU NEED TO EDIT THIS!)
 
-root_password="root" # root users password
+output_dir_base="/home/`logname`/Pogoplug_V3_${build_target}_build" # where the script is going to put its output files (YOU NEED TO CHECK THIS!; default is the home-directory of the currently logged in user) 
 
-username="tester"  # Name of the standard (non-root) user for creation on the target emdebian system
-user_password="tester" # the users password on the emdebian system
+root_password="root" # password for the Debian or Emdebian root user
+username="tester"  # Name of the normal user for the target system
+user_password="tester" # password for the user of the target system
 
-nameserver_addr="192.168.2.1" # "141.82.48.1" (YOU NEED TO EDIT THIS!) Needed for the qemu-environment to work properly.
+
+### These settings are for experienced users ###
+
+base_sys_cache_tarball="${build_target}_${build_target_version}_minbase.tgz" # cache file created by debootstrap, if caching is enabled
+
+extra_files="http://www.hs-augsburg.de/~ingmar_k/Pogoplug_V3/extra_files/pogoplug_v3_arch_ledcontrol.tar.bz2 http://www.hs-augsburg.de/~ingmar_k/Pogoplug_V3/extra_files/pogoplug_v3_arch_kernel_modules.tar.bz2" # some extra archives (list seperated by a single blank space!) that get extracted into the rootfs, when done (for example original led control program and original arch linux kernel modules)
 
 ip_type="dhcp" # set this either to 'dhcp' (default) or to 'static'
 
@@ -34,97 +46,71 @@ netmask="255.255.255.0" # you only need to set this, if ip-type is NOT set to 'd
 
 gateway_ip="192.168.2.1" # you only need to set this, if ip-type is NOT set to 'dhcp', but to 'static'
 
-pogo_hostname="pogoplug-emdebian" # Name that the Emdebian system uses to identify itself on the network
+pogo_hostname="pogoplug-v3-${build_target}" # Name that the Emdebian system uses to identify itself on the network
 
-additional_packages="emdebian-archive-keyring samba samba-common mtd-utils udev ntp netbase module-init-tools nano bzip2 unzip zip screen less usbutils psmisc procps dhcp3-client ifupdown iputils-ping wget net-tools ssh hdparm" # List of packages (each seperated by a single space) that get added to the rootfs
+std_locale="en_US.UTF-8" # initial language setting for console (alternatively for example 'en_US.UTF-8')'
 
-module_load_list="mii gmac" # add names of modules (for example wireless, leds ...) here that should be loaded by /etc/modules (list them, seperated by a single blank space)
+locale_list="en_US.UTF-8 de_DE.UTF-8" # list of locales to enable during configuration
 
+qemu_kernel_pkg="http://www.hs-augsburg.de/~ingmar_k/Pogoplug_V3/kernels/2.6.32.61-ppv3-qemu-1.2.tar.bz2" # qemu kernel file name
 
-#############################
-##### GENERAL SETTINGS: #####
-#############################
+std_kernel_pkg="http://www.hs-augsburg.de/~ingmar_k/Pogoplug_V3/kernels/2.6.32-ppv3-classic-zram-1.1_ARMv6k.tar.bz2" # std kernel file name
 
+tar_format="bz2" # bz2(=bzip2) or gz(=gzip)
+
+current_date=`date +%s` # current date for use on all files that should get a consistent timestamp
 
 if [ "${output_dir_base:(-1):1}" = "/" ]
 then
-	output_dir="${output_dir_base}build_`date +%s`" # Subdirectory for each build-run, ending with the unified Unix-Timestamp (seconds passed since Jan 01 1970)
+	output_dir="${output_dir_base}build_${current_date}" # Subdirectory for each build-run, ending with the unified Unix-Timestamp (seconds passed since Jan 01 1970)
 else
-	output_dir="${output_dir_base}/build_`date +%s`" # Subdirectory for each build-run, ending with the unified Unix-Timestamp (seconds passed since Jan 01 1970)
+	output_dir="${output_dir_base}/build_${current_date}" # Subdirectory for each build-run, ending with the unified Unix-Timestamp (seconds passed since Jan 01 1970)
 fi
 
-output_filename="emdebian_rootfs_pogoplug_v3" # base name of the output file (compressed rootfs)
+qemu_mnt_dir="${output_dir}/mnt_debootstrap" # directory where the qemu filesystem will be mounted
 
-extra_files="http://www.hs-augsburg.de/~ingmar_k/Pogoplug_V3/extra_files/pogoplug_v3_arch_ledcontrol.tar.bz2 http://www.hs-augsburg.de/~ingmar_k/Pogoplug_V3/extra_files/pogoplug_v3_arch_kernel_modules.tar.bz2" # some extra archives (list seperated by a single blank space!) that get extracted into the rootfs, when done (for example original led control program and original arch linux kernel modules)
+work_image_size_MB="1024" # size of the temporary image file, in which the installation process is carried out
 
-debian_mirror_url="http://ftp.uk.debian.org/emdebian/grip" # mirror for debian
+output_filename="${build_target}_rootfs_pogoplug_v3_${pogoplug_v3_version}_${current_date}" # base name of the output file (compressed rootfs)
 
-debian_target_version="stable-grip" # The version of debian that you want to build (ATM only 'squeeze'/'stable' is supported)
+apt_prerequisites_debian="emdebian-archive-keyring debootstrap binfmt-support qemu-user-static qemu qemu-kvm qemu-system parted" # packages needed for the build process on debian
+apt_prerequisites_ubuntu="debian-archive-keyring emdebian-archive-keyring debootstrap binfmt-support qemu qemu-user-static qemu-system qemu-kvm parted" # packages needed for the build process on ubuntu
 
-debian_target_repos="main java"  # select which repository parts to enable for apt; ATM possible parts are: 'main debug dev doc java'
+deb_add_packages="apt-utils,dialog,locales" # packages to directly include in the first debootstrap stage
+additional_packages="mtd-utils udev ntp netbase module-init-tools isc-dhcp-client nano bzip2 unzip zip screen less usbutils psmisc procps ifupdown iputils-ping wget net-tools ssh hdparm" # List of packages (each seperated by a single space) that get added to the rootfs
+module_load_list="gmac" # names of modules (for example wireless, leds ...) that should be automatically loaded through /etc/modules (list them, seperated by a single blank space)
 
-qemu_kernel_pkg_path="http://www.hs-augsburg.de/~ingmar_k/Pogoplug_V3/kernels/" # where to get the qemu kernel (local path or web adress)
+clean_tmp_files="yes" # delete the temporary files, when the build process is done?
 
-std_kernel_pkg_path="http://www.hs-augsburg.de/~ingmar_k/Pogoplug_V3/kernels" # where to get the standard kernel (local path or web adress)
+create_disk="yes" # create a bootable USB thumb drive after building the rootfs?
 
-qemu_kernel_pkg_name="zImage-qemu.tar.bz2" # qemu kernel file name
-
-std_kernel_pkg_name="3.1.10-pogoplug_v3-nonpro-1.9_1362751903.tar.bz2" # standard kernel file name
-
-tar_format="bz2" # bz2(=bzip2) or gz(=gzip) format for the rootfs-archive, this script creates
-
-work_image_size_MB=512 # size of the temporary image file, in which the installation process is carried out (512MB should be plenty)
-
-apt_prerequisites_debian="debootstrap binfmt-support qemu-user-static qemu qemu-kvm qemu-system parted emdebian-archive-keyring" # packages that need to be installed on a debian system in order to create a emdebian rootfs for the pogoplug
-
-apt_prerequisites_ubuntu="debootstrap binfmt-support qemu qemu-system qemu-kvm qemu-user-static parted emdebian-archive-keyring" # packages that need to be installed on a ubuntu system in order to create a emdebian rootfs for the pogoplug
-
-clean_tmp_files="yes" # delete the temporary files, when the build process is done? yes or no
-
-create_usb_stick="yes" # create a bootable USB-stick after building the rootfs? yes or no
-
-udev_tmpfs_size="3M" # Value for changing the UDEV-daemon's default tmpfs size (default=10M); 3M should be plenty enough for such a small system
+use_cache="yes" # use or don't use caching for the apt and debootstrap processes (caching can speed things up, but it can also lead to problems)
 
 
-
-#####################################################
-##### SETTINGS FOR COMPRESSED SWAPSAPCE IN RAM: #####
-#####################################################
-
-# You can use one (and only ONE) of the settings below to potentionally increase performance of you pogoplug under heavy memory load, IF your kernel supports and includes the neaded module!
-
-use_ramzswap="no" # for Kernels 2.6xx only !!! set if you want to use a compressed SWAP space in RAM (can potentionally improve performance)
-
-ramzswap_size_kb="32768" # size of each (there are 2) the ramzswap device in KB(<-- !!!)
-
-ramzswap_kernel_module_name="ramzswap" # name of the ramzswap kernel module (could have a different name on newer kernel versions)
+####################################
+##### SPECIFIC BUILD SETTINGS: #####
+####################################
 
 
-use_zram="no" # for Kernels 3.xx only !!! set if you want to use a compressed SWAP space in RAM (can potentionally improve performance)
+### Settings for compressed SWAP space in RAM ### 
 
-zram_size_byte="33554432" # size of each (there are 2) the zram device in Bytes(<-- !!!)
+use_compressed_swapspace="yes" # Do you want to use a compressed SWAP space in RAM (can potentionally improve performance)?
+compressed_swapspace_module_name="zram" # name of the kernel module for compressed swapspace in RAM (could either be called 'ramzswap' or 'zram', depending on your kernel)
+compressed_swapspace_size_MB="32" # size of the ramzswap/zram device in MegaByte (MB !!!), per CPU-core (so per default 2 swap devices will be created)
 
-zram_kernel_module_name="zram" # name of the ramzswap kernel module (could have a different name on newer kernel versions)
-
-
-vm_swappiness="75" # Setting for general kernel RAM swappiness: With RAMzswap and low RAM, a high number (like 100) could be good. Default in Linux mostly is 60.
-
+vm_swappiness="" # (empty string makes the script ignore this setting and uses the debian default). Setting for general kernel RAM swappiness: Default in Linux mostly is 60. Higher number makes the kernel swap faster.
 
 
-#########################
-##### LED SETTINGS: #####
-#########################
-
-## PLEASE COMMENT OR UNCOMMENT THE SETTINGS FITTING YOUR KERNEL !!!
-
-## LED settings for newer, patched kernels (mostly kernel versions 2.6.31-14 or even 3.1.10 or newer)
-#led_boot_green="echo default-on>/sys/class/leds/status\:health\:green/trigger;"
-#led_reboot_amber="echo default-on>\/sys\/class\/leds\/status\\\:fault\\\:orange\/trigger;" # needs to have escaped slahes and backslashes for the neccessary sed operations
-#led_halt_orange="echo none>\/sys\/class\/leds\/status\\\:health\\\:green\/trigger;echo default-on>\/sys\/class\/leds\/status\\\:fault\\\:orange\/trigger;" # needs to have escaped slahes and backslashes for the neccessary sed operations
-
-## LED settings for old original kernels (mostly kernel version 2.6.31-6)
-led_boot_green="/sbin/proled unlock;/sbin/proled green"
-led_reboot_amber="\/sbin\/proled off;\/sbin\/proled amber" # needs to have escaped slahes and backslashes for the neccessary sed operations
-led_halt_orange="\/sbin\/proled off;\/sbin\/proled orange" # needs to have escaped slahes and backslashes for the neccessary sed operations
+### Partition setting ###
+# Comment: size of the rooot partition doesn't get set directly, but is computed through the following formula:
+# root partition = size_of_usb_drive - (size_boot_partition + size_swap_partition + size_wear_leveling_spare)
+size_swap_partition="512"   # size of the swap partition, in MB (MegaByte)
+size_wear_leveling_spare="128" ## size of spare space to leave for advanced usb thumb drive flash wear leveling, in MB (MegaByte)
+size_alignment="1" ## size of spare space before the root partitionto starts (in MegaByte)
 
 
+####################################
+##### "INSTALL ONLY" SETTINGS: #####
+####################################
+
+default_rootfs_package="" # filename of the rootfs-archive

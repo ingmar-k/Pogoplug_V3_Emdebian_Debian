@@ -2,13 +2,15 @@
 **warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License version 3 (GPLv3; http://www.gnu.org/licenses/gpl-3.0.html ) for more details.**
 
 **If you don't know what you are doing, think twice before using this guide.**
-**I take absolutely no responsibility for any damage(s) that you might cause to your hard- or software-environment by following the descriptions below!**
+**I take absolutely no responsibility for any damage(s) that you might cause to your hard- and/or software-environment by following the descriptions below!**
 
 
-<h1>Pogoplug_V3_Emdebian</h1>
+<h1>Pogoplug_V3_Emdebian_Debian</h1>
 
 
-Scripts to create a bootable Emdebian USB-Stick for the Pogoplug V3 devices.
+Scripts to create a bootable Emdebian or Debian USB-Stick for the Pogoplug V3 devices.
+Emdebian is (mostly) binary compatible to the same Debian versions. However Emdebian is size optimized, by removing documentation etc. . 
+<br><b>Hint: Emdebian is far better suited for a NAND install!</b>
 
 <br>
 <h2>ATTENTION:</h2>
@@ -19,21 +21,21 @@ Scripts to create a bootable Emdebian USB-Stick for the Pogoplug V3 devices.
 
 <li>A <b>working INTERNET CONNECTION</b> is <b>mandatory</b> and <b>must be available RIGHT AWAY</b> when running the script! So please make sure to be connected <b>before starting the script.</b></li>
 </b></ol>
-<br>
+<br>Otherwise you will simply get an error message right away, stating the lack of a connection.
 <br>
 
-HOWTO: Emdebian on the Pogoplug V3 (Classic and/or Pro)
+HOWTO: Emdebian or Debian on the Pogoplug V3 (Classic and/or Pro)
 ------------------
 
 Step-by-step description on how to get Emdebian runnning on your Pogogplug V3:
 
 1. Boot your Pogoplug V3 and install Arch Linux, like explained here: <http://archlinuxarm.org/platforms/armv6/pogoplug-provideov3>
-2. Then get your Debian or Ubuntu Host machine ready and get the scipts via git or download them as a zip file: **`'git clone git://github.com/ingmar-k/Pogoplug_V3_Emdebian.git'`** **_OR_** <https://github.com/ingmar-k/Pogoplug_V3_Emdebian/archive/master.zip>
-3. Make the file _**build_emdebian_system.sh**_ executable, by running **`'chmod +x build_emdebian_system.sh'`**
+2. Then get your Debian or Ubuntu Host machine ready and get the scipts via git or download them as a zip file: **`'git clone git://github.com/ingmar-k/Pogoplug_V3_Emdebian_Debian.git'`** **_OR_** <https://github.com/ingmar-k/Pogoplug_V3_Emdebian_Debian/archive/master.zip>
+3. Make the file _**build_emdebian_debian_system.sh**_ executable, by running **`'chmod +x build_emdebian_debian_system.sh'`**
 4. **VERY IMPORTANT:** Edit the file _**general_settings.sh**_ to exactly represent your host system, Pogoplug-device and network environment.
 5. Run the script **with root privileges (su or sudo!)** by typing **`'./build_emdebian_system.sh'`**
 6. When the script is done, boot your Pogoplug Classic/Pro with the newly created USB-drive attached.
-7. If everything went well, the Plug should boot fine and be accessible via SSH (if you installed the package --> _**general_settings.sh**_ ).
+7. If everything went well, the Plug should boot fine and be accessible via SSH (if you installed the package and the network settings are correct --> _**general_settings.sh**_ ).
 
 DEBUGGING:
 ----------
@@ -110,13 +112,13 @@ Here is how to do that:
 Root-filesystem in NAND
 -----------------
 
-Now that the Pogoplug boots Emdebian from USB, the next possible (but optional) step is putting the rootfs into NAND.
+Now that the Pogoplug boots Emdebian (Debian will probably be way too big for NAND) from USB, the next possible (but optional) step is putting the rootfs into NAND.
 
 1. First, shut down your Pogoplug, remove the USB drive and attach it to your desktop system that was used to create the Emdebian rootfs.
 2. Create a new directory on the USB drive (for example named _**nand_rootfs**_).
 3. Extract the created rootfs archive (by default _emdebian_rootfs_pogoplug_v3.tar.bz2_ file) into the newly created directory.
 4. Open the filesystem-table used for mounting the Rootfs ( _**../nand_rootfs/etc/fstab**_ ) with an editor (for example **nano**).
-5. Remove the 2 lines **'/dev/root	/	ext3	defaults,noatime	0	1'** and **'/dev/sda2	none	swap	defaults	0	0'**, **replace** them with **'/dev/root	/	ubifs	defaults,noatime	0	0'** and save the file.
+5. Remove the 2 lines **'/dev/root	/	ext4	defaults,noatime	0	1'** and **'/dev/sda2	none	swap	defaults	0	0'**, **replace** them with **'/dev/root	/	ubifs	defaults,noatime	0	0'** and save the file.
 6. Make absolutely sure that the _**nand_rootfs**_-directory includes the needed kernel modules in _**/lib/modules**_ !
 7. To delete the contents of the old rootfs in nand, run the command <b>`'flash_eraseall /dev/mtd2'`</b> ( with mtd2 being the rootfs partition according to <b>`'cat /proc/mtd'`</b> ).
 8. Change into a different directory, that is not part of the _**nand_rootfs**_ dir !!!
