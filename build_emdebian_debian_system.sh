@@ -40,7 +40,8 @@ then
 	elif [ "$2" = "build" ]
 	then
 		echo "Cleaning the build directory/directories, now!"
-		if [ -d ${output_dir_base}/build_* ]
+		ls ${output_dir_base}/build_* >/dev/null 2>&1
+		if [ "$?" = "0" ]
 		then
 			rm -rf ${output_dir_base}/build_* 2>>${output_dir_base}/clean_errors.txt
 		else
@@ -57,7 +58,8 @@ then
 			echo "No cache directory '${output_dir_base}/cache/' found, so not cleaning it!"
 		fi
 		echo "Cleaning the build directory/directories, now!"
-		if [ -d ${output_dir_base}/build_* ]
+		ls ${output_dir_base}/build_* >/dev/null 2>&1
+		if [ "$?" = "0" ]
 		then
 			rm -rf ${output_dir_base}/build_* 2>>${output_dir_base}/clean_errors.txt
 		else

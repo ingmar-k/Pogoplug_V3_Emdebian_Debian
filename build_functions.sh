@@ -360,12 +360,54 @@ hwaddress ether ${pogoplug_mac_address}
 END
 fi
 
+if [ \"${pogoplug_v3_version}\" = \"pro\" ]
+then
+	cat <<END >> /etc/network/interfaces
+auto wlan0 
+END
+	if [ \"${ip_type_wireless}\" = \"dhcp\" ]
+	then
+		cat <<END >> /etc/network/interfaces
+iface wlan0 inet dhcp
+wpa-driver wext
+wpa-ssid ${wireless_ssid}
+wpa-ap-scan 1
+wpa-proto RSN
+wpa-pairwise CCMP
+wpa-group CCMP
+wpa-key-mgmt WPA-PSK
+wpa-psk ${wireless_password}
+END
+	elif [ \"${ip_type_wireless}\" = \"static\" ]
+	then
+		cat <<END >> /etc/network/interfaces
+iface wlan0 inet static
+    address ${wireless_static_ip}
+    netmask ${wireless_netmask}
+    network ${wireless_static_ip%.*}.0
+    broadcast ${wireless_static_ip%.*}.255
+    gateway ${wireless_gateway_ip}
+    dns-nameservers ${nameserver_addr}
+    wpa-ssid ${wireless_ssid}
+    wpa-psk ${wireless_password}
+END
+	fi
+fi
+
+mkdir -p /etc/Wireless/RT2860STA/
+cat<<END>/etc/Wireless/RT2860STA/RT2860STA.dat
+CountryRegion=${Country_Region}
+CountryRegionABand=${Country_Region_A_Band}
+CountryCode=${Country_Code}
+WirelessMode=${Wireless_Mode}
+END
+
 echo ${pogo_hostname} > /etc/hostname 2>>/debootstrap_stg2_errors.txt
 
 echo \"127.0.0.1 ${pogo_hostname}\" >> /etc/hosts 2>>/debootstrap_stg2_errors.txt
 echo \"nameserver ${nameserver_addr}\" > /etc/resolv.conf 2>>/debootstrap_stg2_errors.txt
 
-cat <<END > /etc/rc.local 2>>/deboostrap_stg2_errors.txt
+cat <<END > /etc/rc.local 2>>/debootstrap_stg2_errors.txt
 #!/bin/sh -e
 #
 # rc.local
@@ -415,26 +457,45 @@ fi
 
 if [ "${use_cache}" = "yes" ]
 then
-	if [ -e ${output_dir_base}/cache/additional_packages.tar.bz2 ]
+	if [ "${pogoplug_v3_version}" = "classic" ]
 	then
-		fn_log_echo "Extracting the additional packages 'additional_packages.tar.bz2' from cache. now."
-		tar_all extract "${output_dir_base}/cache/additional_packages.tar.bz2" "${qemu_mnt_dir}/var/cache/apt/" 
-	elif [ ! -e "${output_dir}/cache/additional_packages.tar.bz2" ]
-	then
-		fn_log_echo "No compressed additional_packages archive found in cache directory.
+		if [ -e ${output_dir_base}/cache/additional_packages.tar.bz2 ]
+		then
+			fn_log_echo "Extracting the additional packages 'additional_packages.tar.bz2' from cache. now."
+			tar_all extract "${output_dir_base}/cache/additional_packages.tar.bz2" "${qemu_mnt_dir}/var/cache/apt/" 
+		elif [ ! -e "${output_dir}/cache/additional_packages.tar.bz2" ]
+		then
+			fn_log_echo "No compressed additional_packages archive found in cache directory.
 Creating it now!"
-		add_pack_create="yes"
+			add_pack_create="yes"
+		fi
+	elif [ "${pogoplug_v3_version}" = "pro" ]
+	then
+		if [ -e ${output_dir_base}/cache/additional_packages_including_wireless.tar.bz2 ]
+		then
+			fn_log_echo "Extracting the additional packages 'additional_packages_including_wireless.tar.bz2' from cache. now."
+			tar_all extract "${output_dir_base}/cache/additional_packages_including_wireless.tar.bz2" "${qemu_mnt_dir}/var/cache/apt/" 
+		elif [ ! -e "${output_dir}/cache/additional_packages_including_wireless.tar.bz2" ]
+		then
+			fn_log_echo "No compressed additional_packages_including_wireless archive found in cache directory.
+Creating it now!"
+			add_pack_create="yes"
+		fi
+	else
+		fn_log_echo "Setting for pogoplug_v3_version seems to be incorrect.
+It was set to '${poogplug_v3_version}'. Please check!."
+		umount_img all
+		exit 95
 	fi
 fi
-
 
 echo "#!/bin/bash
 export LANG=C 2>>/debootstrap_stg2_errors.txt
 
-apt-get -d -y --force-yes install ${additional_packages} 2>>/deboostrap_stg2_errors.txt
+apt-get -d -y --force-yes install ${additional_packages} 2>>/debootstrap_stg2_errors.txt
 if [ \"${pogoplug_v3_version}\" = \"pro\" ]
 then
-	apt-get -d -y --force-yes install firmware-ralink 2>>/deboostrap_stg2_errors.txt
+	apt-get -d -y --force-yes install ${additional_wireless_packages} 2>>/debootstrap_stg2_errors.txt
 fi
 if [ -f /etc/locale.gen ]
 then
@@ -452,7 +513,7 @@ cat <<END > /etc/fstab 2>>/debootstrap_stg2_errors.txt
 # /etc/fstab: static file system information.
 #
 # <file system> <mount point>   <type>  <options>       <dump>  <pass>
-/dev/root/	ext4	defaults,noatime	0	1
+/dev/root/	/		ext4	defaults,noatime	0	1
 /dev/sda2	swap	swap	defaults,pri=0	0	0
 tmpfs		/tmp	tmpfs	defaults	0	0
 tmpfs		/var/spool	tmpfs	defaults,noatime,mode=1777	0	0
@@ -460,8 +521,8 @@ tmpfs		/var/tmp	tmpfs	defaults	0	0
 tmpfs		/var/log	tmpfs	defaults,noatime,mode=0755	0	0
 END
 
-sed -i 's/^\([1-6]:.* tty[1-6]\)/#\1/' /etc/inittab 2>>/deboostrap_stg2_errors.txt
-echo '#T0:2345:respawn:/sbin/getty -L ttyS0 115200 vt102' >> /etc/inittab 2>>/deboostrap_stg2_errors.txt	# insert (temporarily commented!) entry for serial console
+sed -i 's/^\([1-6]:.* tty[1-6]\)/#\1/' /etc/inittab 2>>/debootstrap_stg2_errors.txt
+echo '#T0:2345:respawn:/sbin/getty -L ttyS0 115200 vt102' >> /etc/inittab 2>>/debootstrap_stg2_errors.txt	# insert (temporarily commented!) entry for serial console
 
 rm /debootstrap_pt2.sh
 exit 0" > ${qemu_mnt_dir}/debootstrap_pt2.sh
@@ -485,7 +546,18 @@ if [ "${add_pack_create}" = "yes" ]
 then
 	fn_log_echo "Compressing additional packages, in order to save them in the cache directory."
 	cd ${qemu_mnt_dir}/var/cache/apt/
-	tar_all compress "${output_dir_base}/cache/additional_packages.tar.bz2" .
+	if [ "${pogoplug_v3_version}" = "classic" ]
+	then
+		tar_all compress "${output_dir_base}/cache/additional_packages.tar.bz2" .
+	elif [ "${pogoplug_v3_version}" = "pro" ]
+	then
+		tar_all compress "${output_dir_base}/cache/additional_packages_including_wireless.tar.bz2" .
+	else
+		fn_log_echo "Setting for pogoplug_v3_version seems to be incorrect.
+It was set to '${poogplug_v3_version}'. Please check!."
+		umount_img all
+		exit 96
+	fi
 	fn_log_echo "Successfully created compressed cache archive of additional packages."
 	cd ${output_dir}
 fi
@@ -551,18 +623,18 @@ fi
 
 if [ ! -z "${module_load_list}" ]
 then
-set -- "${module_load_list}"
-while [ $# -gt 0 ]
-do
-	echo ${1} >> ${output_dir}/mnt_debootstrap/etc/modules 2>>/deboostrap_stg2_errors.txt
-	shift
-done
+	for i in ${module_load_list}
+	do
+		cat<<END>>${output_dir}/mnt_debootstrap/etc/modules 2>>/debootstrap_stg2_errors.txt
+${i} 
+END
+	done
 fi
 
 if [ "${use_compressed_swapspace}" = "yes" ]
 then
 	echo "#!/bin/sh
-cat <<END > /etc/rc.local 2>>/ramzswap_setup_errors.txt
+cat <<END > /etc/rc.local 2>>/compressed_swapspace_setup_errors.txt
 #!/bin/sh -e
 #
 # rc.local
@@ -590,7 +662,7 @@ END
 exit 0" >> ${output_dir}/mnt_debootstrap/compressed_swapspace_setup.sh
 	elif [ "${compressed_swapspace_module_name}" = "zram" ]
 	then
-		echo "modprobe ${zram_kernel_module_name} num_devices=2
+		echo "modprobe ${compressed_swapspace_module_name} num_devices=2
 sleep 1
 echo `expr ${compressed_swapspace_size_MB} \* 1024 \* 1024` > /sys/block/zram0/disksize
 echo `expr ${compressed_swapspace_size_MB} \* 1024 \* 1024` > /sys/block/zram1/disksize
@@ -607,15 +679,15 @@ exit 0" >> ${output_dir}/mnt_debootstrap/compressed_swapspace_setup.sh
 fi
 chmod +x ${output_dir}/mnt_debootstrap/compressed_swapspace_setup.sh
 
-#date_cur=`date` # needed further down as a very important part to circumvent the PAM Day0 change password problem
+date_cur=`date` # needed further down as a very important part to circumvent the PAM Day0 change password problem
 
 echo "#!/bin/bash
 
-date -s \"${current_date}\" 2>>/post_debootstrap_errors.txt	# set the system date to prevent PAM from exhibiting its nasty DAY0 forced password change
+date -s \"${date_cur}\" 2>>/post_debootstrap_errors.txt	# set the system date to prevent PAM from exhibiting its nasty DAY0 forced password change
 apt-get -y --force-yes install ${additional_packages} 2>>/post_debootstrap_errors.txt
 if [ \"${pogoplug_v3_version}\" = \"pro\" ]
 then
-	apt-get -y --force-yes install firmware-ralink 2>>/deboostrap_stg2_errors.txt
+	apt-get -y --force-yes install ${additional_wireless_packages} 2>>/debootstrap_stg2_errors.txt
 fi
 apt-get clean	# installed the already downloaded packages
 
@@ -730,7 +802,7 @@ echo -e \"${user_password}\n${user_password}\n\n\n\n\n\n\n\" | adduser ${usernam
 
 if [ ! \"${build_target_version}\" = \"squeeze\" ] && [ ! \"${build_target_version}\" = \"squeeze-grip\" ] && [ ! \"${build_target_version}\" = \"oldstable\" ] && [ ! \"${build_target_version}\" = \"oldstable-grip\" ]
 then
-	sed -i 's<CONCURRENCY=makefile<CONCURRENCY=\"none\"<g' /etc/init.d/rc
+	sed -i 's<^CONCURRENCY=makefile<CONCURRENCY=\"none\"<g' /etc/init.d/rc
 fi
 
 sed -i 's<#T0:2345:respawn:/sbin/getty<T0:2345:respawn:/sbin/getty<g' /etc/inittab

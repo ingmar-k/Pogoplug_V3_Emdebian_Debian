@@ -18,14 +18,14 @@ build_target_version="wheezy" # The version of debian/emdebian that you want to 
 target_mirror_url="http://ftp.uk.debian.org/emdebian/grip" # mirror address for debian or emdebian
 target_repositories="main" # what repos to use in the sources.list (for example 'main contrib non-free' for Debian)
 
-pogoplug_v3_version="classic" # either 'classic' or 'pro' (the pro features integrated wireless lan, the classic does NOT)
+pogoplug_v3_version="pro" # either 'classic' or 'pro' (the pro features integrated wireless lan, the classic does NOT; if you set this to 'pro' 'additional_packages_wireless' will be included)
 pogoplug_mac_address="00:00:00:00:00:00" # !!!VERY IMPORTANT!!! (YOU NEED TO EDIT THIS!) Without a valid MAC address, your device won't be accessible via LAN
 
 host_os="Ubuntu" # Debian or Ubuntu (YOU NEED TO EDIT THIS!)
 
 nameserver_addr="192.168.2.1" # "141.82.48.1" (YOU NEED TO EDIT THIS!)
 
-output_dir_base="/home/`logname`/Pogoplug_V3_${build_target}_build" # where the script is going to put its output files (YOU NEED TO CHECK THIS!; default is the home-directory of the currently logged in user) 
+output_dir_base="/home/`logname`/pogoplug_v3_${build_target}_build" # where the script is going to put its output files (YOU NEED TO CHECK THIS!; default is the home-directory of the currently logged in user) 
 
 root_password="root" # password for the Debian or Emdebian root user
 username="tester"  # Name of the normal user for the target system
@@ -36,7 +36,14 @@ user_password="tester" # password for the user of the target system
 
 base_sys_cache_tarball="${build_target}_${build_target_version}_minbase.tgz" # cache file created by debootstrap, if caching is enabled
 
-extra_files="http://www.hs-augsburg.de/~ingmar_k/Pogoplug_V3/extra_files/pogoplug_v3_arch_ledcontrol.tar.bz2 http://www.hs-augsburg.de/~ingmar_k/Pogoplug_V3/extra_files/pogoplug_v3_arch_kernel_modules.tar.bz2" # some extra archives (list seperated by a single blank space!) that get extracted into the rootfs, when done (for example original led control program and original arch linux kernel modules)
+extra_files="http://www.hs-augsburg.de/~ingmar_k/Pogoplug_V3/extra_files/pogoplug_v3_arch_ledcontrol.tar.bz2" # some extra archives (list seperated by a single blank space!) that get extracted into the rootfs, when done (for example original led control program and original arch linux kernel modules)
+
+
+###################################
+##### NETWORK BUILD SETTINGS: #####
+###################################
+
+### ETHERNET ###
 
 ip_type="dhcp" # set this either to 'dhcp' (default) or to 'static'
 
@@ -46,6 +53,30 @@ netmask="255.255.255.0" # you only need to set this, if ip-type is NOT set to 'd
 
 gateway_ip="192.168.2.1" # you only need to set this, if ip-type is NOT set to 'dhcp', but to 'static'
 
+### WIRELESS ###
+
+ip_type_wireless="dhcp" # set this either to 'dhcp' (default) or to 'static'
+
+wireless_ssid="MySSID" # set this to your wireless SSID
+
+wireless_password="Password_Swordfish" # set this to your wireless password
+
+wireless_static_ip="192.168.2.100" # you only need to set this, if ip-type is NOT set to 'dhcp', but to 'static'
+
+wireless_netmask="255.255.255.0" # you only need to set this, if ip-type is NOT set to 'dhcp', but to 'static'
+
+wireless_gateway_ip="192.168.2.1" # you only need to set this, if ip-type is NOT set to 'dhcp', but to 'static'
+
+Country_Region="1" # wireless region setting for rt3090
+
+Country_Region_A_Band="1" # wireless region band setting for rt3090
+
+Country_Code="DE" # wireless country code setting for rt3090
+
+Wireless_Mode="5" # wireless mode setting for rt3090
+
+################
+
 pogo_hostname="pogoplug-v3-${build_target}" # Name that the Emdebian system uses to identify itself on the network
 
 std_locale="en_US.UTF-8" # initial language setting for console (alternatively for example 'en_US.UTF-8')'
@@ -54,7 +85,7 @@ locale_list="en_US.UTF-8 de_DE.UTF-8" # list of locales to enable during configu
 
 qemu_kernel_pkg="http://www.hs-augsburg.de/~ingmar_k/Pogoplug_V3/kernels/2.6.32.61-ppv3-qemu-1.2.tar.bz2" # qemu kernel file name
 
-std_kernel_pkg="http://www.hs-augsburg.de/~ingmar_k/Pogoplug_V3/kernels/2.6.32-ppv3-classic-zram-1.1_ARMv6k.tar.bz2" # std kernel file name
+std_kernel_pkg="http://www.hs-augsburg.de/~ingmar_k/Pogoplug_V3/kernels/2.6.32-ppv3-pro-zram-1.0_ARMv6k.tar.bz2" # std kernel file name
 
 tar_format="bz2" # bz2(=bzip2) or gz(=gzip)
 
@@ -77,8 +108,10 @@ apt_prerequisites_debian="emdebian-archive-keyring debootstrap binfmt-support qe
 apt_prerequisites_ubuntu="debian-archive-keyring emdebian-archive-keyring debootstrap binfmt-support qemu qemu-user-static qemu-system qemu-kvm parted" # packages needed for the build process on ubuntu
 
 deb_add_packages="apt-utils,dialog,locales" # packages to directly include in the first debootstrap stage
-additional_packages="mtd-utils udev ntp netbase module-init-tools isc-dhcp-client nano bzip2 unzip zip screen less usbutils psmisc procps ifupdown iputils-ping wget net-tools ssh hdparm" # List of packages (each seperated by a single space) that get added to the rootfs
-module_load_list="gmac" # names of modules (for example wireless, leds ...) that should be automatically loaded through /etc/modules (list them, seperated by a single blank space)
+additional_packages="emdebian-archive-keyring mtd-utils udev ntp netbase module-init-tools isc-dhcp-client nano bzip2 unzip zip screen less usbutils psmisc procps ifupdown iputils-ping wget net-tools ssh hdparm" # List of packages (each seperated by a single space) that get added to the rootfs
+additional_wireless_packages="wireless-tools wpasupplicant" # packages for wireless lan; mostly for the Pogoplug V3 Pro
+
+module_load_list="mii gmac rt3090" # names of modules (for example wireless, leds ...) that should be automatically loaded through /etc/modules (list them, seperated by a single blank space)
 
 clean_tmp_files="yes" # delete the temporary files, when the build process is done?
 
@@ -97,7 +130,6 @@ use_cache="yes" # use or don't use caching for the apt and debootstrap processes
 use_compressed_swapspace="yes" # Do you want to use a compressed SWAP space in RAM (can potentionally improve performance)?
 compressed_swapspace_module_name="zram" # name of the kernel module for compressed swapspace in RAM (could either be called 'ramzswap' or 'zram', depending on your kernel)
 compressed_swapspace_size_MB="32" # size of the ramzswap/zram device in MegaByte (MB !!!), per CPU-core (so per default 2 swap devices will be created)
-
 vm_swappiness="" # (empty string makes the script ignore this setting and uses the debian default). Setting for general kernel RAM swappiness: Default in Linux mostly is 60. Higher number makes the kernel swap faster.
 
 
