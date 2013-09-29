@@ -3,7 +3,6 @@
 # Should run on current Debian or Ubuntu versions
 # Author: Ingmar Klein (ingmar.klein@hs-augsburg.de)
 
-
 # This program (including documentation) is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
 # warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License version 3 (GPLv3; http://www.gnu.org/licenses/gpl-3.0.html ) for more details.
 
@@ -104,7 +103,7 @@ check_connectivity()
 fn_log_echo "Checking internet connectivity, which is mandatory for the next step."
 for i in {1..3}
 do
-	for i in google.com kernel.org debian.org 
+	for i in google.com kernel.org debian.org ubuntu.com linuxmint.com
 	do
 		ping -c 3 ${i}
 		if [ "$?" = "0" ]
@@ -342,7 +341,7 @@ mknod /dev/ttyS0 c 4 64	# for the serial console 2>>/debootstrap_stg2_errors.txt
 if [ \"${ip_type}\" = \"dhcp\" ]
 then
 	cat <<END > /etc/network/interfaces
-auto lo eth0
+auto ${interfaces_auto}
 iface lo inet loopback
 iface eth0 inet dhcp
 hwaddress ether ${pogoplug_mac_address}
@@ -350,7 +349,7 @@ END
 elif [ \"${ip_type}\" = \"static\" ]
 then
 	cat <<END > /etc/network/interfaces
-auto lo eth0
+auto ${interfaces_auto}
 iface lo inet loopback
 iface eth0 inet static
 address ${static_ip}
@@ -491,7 +490,7 @@ fi
 
 echo "#!/bin/bash
 export LANG=C 2>>/debootstrap_stg2_errors.txt
-
+apt-key update
 apt-get -d -y --force-yes install ${additional_packages} 2>>/debootstrap_stg2_errors.txt
 if [ \"${pogoplug_v3_version}\" = \"pro\" ]
 then
@@ -1174,14 +1173,14 @@ then
 	if [ "$?" = "0"  ]
 	then
 		fn_log_echo "Virtual Image still mounted. Trying to umount now!"
-		umount ${qemu_mnt_dir}/proc 2>/dev/null
-		sleep 3
 		umount ${qemu_mnt_dir}/dev/pts 2>/dev/null
-		sleep 3
+		sleep 5
 		umount ${qemu_mnt_dir}/dev/ 2>/dev/null
-		sleep 3
+		sleep 5
+		umount ${qemu_mnt_dir}/proc 2>/dev/null
+		sleep 5
 		umount ${qemu_mnt_dir}/sys 2>/dev/null
-		sleep 3
+		sleep 5
 	fi
 
 	mount | egrep '(${qemu_mnt_dir}/sys|${qemu_mnt_dir}/proc|${qemu_mnt_dir}/dev/pts)' > /dev/null
@@ -1197,16 +1196,16 @@ then
 	if [ "$?" = "0"  ]
 	then
 		fn_log_echo "Virtual Image still mounted. Trying to umount now!"
-		umount ${qemu_mnt_dir}/proc 2>/dev/null
-		sleep 3
 		umount ${qemu_mnt_dir}/dev/pts 2>/dev/null
-		sleep 3
+		sleep 5
 		umount ${qemu_mnt_dir}/dev/ 2>/dev/null
-		sleep 3
+		sleep 5
+		umount ${qemu_mnt_dir}/proc 2>/dev/null
+		sleep 5
 		umount ${qemu_mnt_dir}/sys 2>/dev/null
-		sleep 3
+		sleep 5
 		umount ${qemu_mnt_dir}/ 2>/dev/null
-		sleep 3
+		sleep 5
 	fi
 
 	mount | grep "${output_dir}" >/dev/null

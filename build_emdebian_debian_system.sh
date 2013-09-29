@@ -93,7 +93,6 @@ then
 	prep_output
 	build_rootfs
 	regular_cleanup
-	
 elif [ \( "$1" = "--install" -o "$1" = "-i" \) -a ! -z "$2" ] # case of wanting to install a existing rootfs-image to USB drive
 then
 	prep_output
@@ -123,8 +122,7 @@ Please check! Exiting now."
 		exit 2
 	fi
 	create_drive
-	regular_cleanup
-	
+	regular_cleanup	
 elif [ \( "$1" = "--install" -o "$1" = "-i" \) -a -z "$2" ]
 then
 	echo "You seem to have called the script with the '--install' parameter.
@@ -147,6 +145,5 @@ Besides that you can also run '$0' without any parameters, for the full function
 Exiting now!"
 	exit 4
 fi
-
 
 exit 0

@@ -2,11 +2,20 @@
 # Bash script that creates a Debian or Emdebian rootfs or even a complete USB thumb drive a Pogoplug V3 device
 # Should run on current Debian or Ubuntu versions
 # Author: Ingmar Klein (ingmar.klein@hs-augsburg.de)
-# Additional part of the main script 'build__emdebian_debian_system.sh', that contains all the general settings
+# Additional part of the main script 'build_emdebian_debian_system.sh', that contains all the general settings
 
 # This program (including documentation) is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
 # warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License version 3 (GPLv3; http://www.gnu.org/licenses/gpl-3.0.html )
 # for more details.
+
+##################
+### IMPORTANT: ###
+##################
+
+# The settings that you put into this file will exactly define the output of the scripts.
+# So, please take your time and look through all the settings thoroughly, before running the scripts.
+# Reading the file 'README.md' is also highly recommended!
+
 
 ###################################
 ##### GENERAL BUILD SETTINGS: #####
@@ -23,25 +32,65 @@ pogoplug_mac_address="00:00:00:00:00:00" # !!!VERY IMPORTANT!!! (YOU NEED TO EDI
 
 host_os="Ubuntu" # Debian or Ubuntu (YOU NEED TO EDIT THIS!)
 
-nameserver_addr="192.168.2.1" # "141.82.48.1" (YOU NEED TO EDIT THIS!)
-
 output_dir_base="/home/`logname`/pogoplug_v3_${build_target}_build" # where the script is going to put its output files (YOU NEED TO CHECK THIS!; default is the home-directory of the currently logged in user) 
+current_date=`date +%s` # current date for use on all files that should get a consistent timestamp
+if [ "${output_dir_base:(-1):1}" = "/" ]
+then
+	output_dir="${output_dir_base}build_${current_date}" # Subdirectory for each build-run, ending with the unified Unix-Timestamp (seconds passed since Jan 01 1970)
+else
+	output_dir="${output_dir_base}/build_${current_date}" # Subdirectory for each build-run, ending with the unified Unix-Timestamp (seconds passed since Jan 01 1970)
+fi
 
 root_password="root" # password for the Debian or Emdebian root user
 username="tester"  # Name of the normal user for the target system
 user_password="tester" # password for the user of the target system
 
+deb_add_packages="apt-utils,dialog,locales,emdebian-archive-keyring,debian-archive-keyring" # packages to directly include in the first debootstrap stage
+additional_packages="mtd-utils udev ntp netbase module-init-tools isc-dhcp-client nano bzip2 unzip zip screen less usbutils psmisc procps ifupdown iputils-ping wget net-tools ssh hdparm" # List of packages (each seperated by a single space) that get added to the rootfs
+additional_wireless_packages="wireless-tools wpasupplicant" # packages for wireless lan; mostly for the Pogoplug V3 Pro
+
+module_load_list="mii gmac rt3090" # names of modules (for example wireless, leds ...) that should be automatically loaded through /etc/modules (list them, seperated by a single blank space)
+
+interfaces_auto="lo eth0 wlan0" # (IMPORTANT!!!) what network interfaces to bring up automatically on each boot; if you don't list the needed interfaces here, you will have to enable them manually, after booting
+nameserver_addr="192.168.2.1" # "141.82.48.1" (YOU NEED TO CHECK THIS!!!)
+
+
 
 ### These settings are for experienced users ###
 
-base_sys_cache_tarball="${build_target}_${build_target_version}_minbase.tgz" # cache file created by debootstrap, if caching is enabled
+std_locale="en_US.UTF-8" # initial language setting for console (alternatively for example 'en_US.UTF-8')'
+
+locale_list="en_US.UTF-8 de_DE.UTF-8" # list of locales to enable during configuration
 
 extra_files="http://www.hs-augsburg.de/~ingmar_k/Pogoplug_V3/extra_files/pogoplug_v3_arch_ledcontrol.tar.bz2" # some extra archives (list seperated by a single blank space!) that get extracted into the rootfs, when done (for example original led control program and original arch linux kernel modules)
+
+qemu_kernel_pkg="http://www.hs-augsburg.de/~ingmar_k/Pogoplug_V3/kernels/2.6.32.61-ppv3-qemu-1.2.tar.bz2" # qemu kernel file name
+
+std_kernel_pkg="http://www.hs-augsburg.de/~ingmar_k/Pogoplug_V3/kernels/2.6.32-ppv3-pro-zram-1.0_ARMv6k.tar.bz2" # std kernel file name
+
+tar_format="bz2" # bz2(=bzip2) or gz(=gzip)
+
+qemu_mnt_dir="${output_dir}/mnt_debootstrap" # directory where the qemu filesystem will be mounted
+
+work_image_size_MB="1024" # size of the temporary image file, in which the installation process is carried out
+
+base_sys_cache_tarball="${build_target}_${build_target_version}_minbase.tgz" # cache file created by debootstrap, if caching is enabled
+
+output_filename="${build_target}_rootfs_pogoplug_v3_${pogoplug_v3_version}_${current_date}" # base name of the output file (compressed rootfs)
+
+### Check these very carefully, if you experience errors while running 'check_n_install_prerequisites'
+apt_prerequisites_debian="emdebian-archive-keyring debootstrap binfmt-support qemu-user-static qemu qemu-kvm qemu-system parted" # packages needed for the build process on debian
+apt_prerequisites_ubuntu="debian-archive-keyring emdebian-archive-keyring debootstrap binfmt-support qemu qemu-user-static qemu-system qemu-kvm parted" # packages needed for the build process on ubuntu
 
 
 ###################################
 ##### NETWORK BUILD SETTINGS: #####
 ###################################
+
+### GENERAL NETWORK SETTINGS ###
+
+pogo_hostname="pogoplug-v3-${build_target}" # Name that the Emdebian system uses to identify itself on the network
+
 
 ### ETHERNET ###
 
@@ -52,6 +101,7 @@ static_ip="192.168.2.100" # you only need to set this, if ip-type is NOT set to 
 netmask="255.255.255.0" # you only need to set this, if ip-type is NOT set to 'dhcp', but to 'static'
 
 gateway_ip="192.168.2.1" # you only need to set this, if ip-type is NOT set to 'dhcp', but to 'static'
+
 
 ### WIRELESS ###
 
@@ -75,54 +125,16 @@ Country_Code="DE" # wireless country code setting for rt3090
 
 Wireless_Mode="5" # wireless mode setting for rt3090
 
-################
 
-pogo_hostname="pogoplug-v3-${build_target}" # Name that the Emdebian system uses to identify itself on the network
-
-std_locale="en_US.UTF-8" # initial language setting for console (alternatively for example 'en_US.UTF-8')'
-
-locale_list="en_US.UTF-8 de_DE.UTF-8" # list of locales to enable during configuration
-
-qemu_kernel_pkg="http://www.hs-augsburg.de/~ingmar_k/Pogoplug_V3/kernels/2.6.32.61-ppv3-qemu-1.2.tar.bz2" # qemu kernel file name
-
-std_kernel_pkg="http://www.hs-augsburg.de/~ingmar_k/Pogoplug_V3/kernels/2.6.32-ppv3-pro-zram-1.0_ARMv6k.tar.bz2" # std kernel file name
-
-tar_format="bz2" # bz2(=bzip2) or gz(=gzip)
-
-current_date=`date +%s` # current date for use on all files that should get a consistent timestamp
-
-if [ "${output_dir_base:(-1):1}" = "/" ]
-then
-	output_dir="${output_dir_base}build_${current_date}" # Subdirectory for each build-run, ending with the unified Unix-Timestamp (seconds passed since Jan 01 1970)
-else
-	output_dir="${output_dir_base}/build_${current_date}" # Subdirectory for each build-run, ending with the unified Unix-Timestamp (seconds passed since Jan 01 1970)
-fi
-
-qemu_mnt_dir="${output_dir}/mnt_debootstrap" # directory where the qemu filesystem will be mounted
-
-work_image_size_MB="1024" # size of the temporary image file, in which the installation process is carried out
-
-output_filename="${build_target}_rootfs_pogoplug_v3_${pogoplug_v3_version}_${current_date}" # base name of the output file (compressed rootfs)
-
-apt_prerequisites_debian="emdebian-archive-keyring debootstrap binfmt-support qemu-user-static qemu qemu-kvm qemu-system parted" # packages needed for the build process on debian
-apt_prerequisites_ubuntu="debian-archive-keyring emdebian-archive-keyring debootstrap binfmt-support qemu qemu-user-static qemu-system qemu-kvm parted" # packages needed for the build process on ubuntu
-
-deb_add_packages="apt-utils,dialog,locales" # packages to directly include in the first debootstrap stage
-additional_packages="emdebian-archive-keyring mtd-utils udev ntp netbase module-init-tools isc-dhcp-client nano bzip2 unzip zip screen less usbutils psmisc procps ifupdown iputils-ping wget net-tools ssh hdparm" # List of packages (each seperated by a single space) that get added to the rootfs
-additional_wireless_packages="wireless-tools wpasupplicant" # packages for wireless lan; mostly for the Pogoplug V3 Pro
-
-module_load_list="mii gmac rt3090" # names of modules (for example wireless, leds ...) that should be automatically loaded through /etc/modules (list them, seperated by a single blank space)
+####################################
+##### SPECIFIC BUILD SETTINGS: #####
+####################################
 
 clean_tmp_files="yes" # delete the temporary files, when the build process is done?
 
 create_disk="yes" # create a bootable USB thumb drive after building the rootfs?
 
 use_cache="yes" # use or don't use caching for the apt and debootstrap processes (caching can speed things up, but it can also lead to problems)
-
-
-####################################
-##### SPECIFIC BUILD SETTINGS: #####
-####################################
 
 
 ### Settings for compressed SWAP space in RAM ### 
@@ -145,4 +157,4 @@ size_alignment="1" ## size of spare space before the root partitionto starts (in
 ##### "INSTALL ONLY" SETTINGS: #####
 ####################################
 
-default_rootfs_package="" # filename of the rootfs-archive
+default_rootfs_package="" # filename of the default rootfs-archive for the '--install' call parameter
