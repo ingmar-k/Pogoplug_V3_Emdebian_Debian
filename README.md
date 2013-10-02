@@ -15,6 +15,10 @@ Emdebian is (mostly) binary compatible to the same Debian versions. However Emde
 <br>
 <h2>ATTENTION:</h2>
 <ol>
+<li>The original ARCH Linux kernel 2.6.31.6, that is flashed to NAND per default, is too old to run Debian/Emdebian Wheezy or anything newer!
+
+<li>If you want to run Wheezy, or anything newer, you will have to update the kernel FIRST! Otherwise the system won't boot!
+
 <li>A <b>SERIAL CONNECTION</b> to the Pogoplug is <b>HIGHLY RECOMMENDED</b> for this procedure.<br><i><b>Debugging is more or less impossible without it!</b></i></li><br>
 
 <li><b>Most of the descriptions below assume that you are able to connect to the Pogoplug via serial connection!!!</b></li><br>
