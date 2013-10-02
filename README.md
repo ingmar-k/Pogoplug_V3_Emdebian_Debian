@@ -15,17 +15,16 @@ Emdebian is (mostly) binary compatible to the same Debian versions. However Emde
 <br>
 <h2>ATTENTION:</h2>
 <ol>
-<li>The original ARCH Linux kernel 2.6.31.6, that is flashed to NAND per default, is too old to run Debian/Emdebian Wheezy or anything newer!
+<li><b>The original ARCH Linux kernel 2.6.31.6, that is flashed to NAND per default, is too old to run Debian/Emdebian Wheezy or anything newer!<br>
 
-<li>If you want to run Wheezy, or anything newer, you will have to update the kernel FIRST! Otherwise the system won't boot!
+<li>If you want to run Wheezy, or anything newer, you will have to update the kernel FIRST! Otherwise the system won't boot!</b><br>
 
 <li>A <b>SERIAL CONNECTION</b> to the Pogoplug is <b>HIGHLY RECOMMENDED</b> for this procedure.<br><i><b>Debugging is more or less impossible without it!</b></i></li><br>
 
 <li><b>Most of the descriptions below assume that you are able to connect to the Pogoplug via serial connection!!!</b></li><br>
 
 <li>A <b>working INTERNET CONNECTION</b> is <b>mandatory</b> and <b>must be available RIGHT AWAY</b> when running the script! So please make sure to be connected <b>before starting the script.</b></li>
-</b></ol>
-<br>Otherwise you will simply get an error message right away, stating the lack of a connection.
+</b><br>Otherwise you will simply get an error message right away, stating the lack of a connection.</ol>
 <br>
 
 HOWTO: Emdebian or Debian on the Pogoplug V3 (Classic and/or Pro)
