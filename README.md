@@ -121,7 +121,7 @@ Now that the Pogoplug boots Emdebian (Debian will probably be way too big for NA
 2. Create a new directory on the USB drive (for example named _**nand_rootfs**_).
 3. Extract the created rootfs archive (by default _emdebian_rootfs_pogoplug_v3.tar.bz2_ file) into the newly created directory.
 4. Open the filesystem-table used for mounting the Rootfs ( _**../nand_rootfs/etc/fstab**_ ) with an editor (for example **nano**).
-5. Remove the 2 lines **'/dev/root	/	ext4	defaults,noatime	0	1'** and **'/dev/sda2	none	swap	defaults	0	0'**, **replace** them with **'/dev/root	/	ubifs	defaults,noatime	0	0'** and save the file.
+5. Remove the 2 lines **'/dev/root	/	ext3/ext4	defaults,noatime	0	1'** and **'/dev/sda2	none	swap	defaults	0	0'**, **replace** them with **'/dev/root	/	ubifs	defaults,noatime	0	0'** and save the file.
 6. Make absolutely sure that the _**nand_rootfs**_-directory includes the needed kernel modules in _**/lib/modules**_ !
 7. To delete the contents of the old rootfs in nand, run the command <b>`'flash_eraseall /dev/mtd2'`</b> ( with mtd2 being the rootfs partition according to <b>`'cat /proc/mtd'`</b> ).
 8. Change into a different directory, that is not part of the _**nand_rootfs**_ dir !!!

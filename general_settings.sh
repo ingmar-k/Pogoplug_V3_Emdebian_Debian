@@ -17,6 +17,20 @@
 # Reading the file 'README.md' is also highly recommended!
 
 
+##################################################################################################
+####### GETTING THE NAME OF THE LOGGED IN USER, FOR USE IN THE DEFAULT OUTPUT-DIRECTORY ##########
+##################################################################################################
+
+if logname &> /dev/null ; then 
+    LOG_NAME=$( logname )
+else 
+    LOG_NAME=$( id | cut -d "(" -f 2 | cut -d ")" -f1 )		
+fi
+
+##################################################################################################
+##################################################################################################
+
+
 ###################################
 ##### GENERAL BUILD SETTINGS: #####
 ###################################
@@ -32,8 +46,15 @@ pogoplug_mac_address="00:00:00:00:00:00" # !!!VERY IMPORTANT!!! (YOU NEED TO EDI
 
 host_os="Ubuntu" # Debian or Ubuntu (YOU NEED TO EDIT THIS!)
 
-output_dir_base="/home/`logname`/pogoplug_v3_${build_target}_build" # where the script is going to put its output files (YOU NEED TO CHECK THIS!; default is the home-directory of the currently logged in user) 
+output_dir_base="/home/${LOG_NAME}/pogoplug_v3_${build_target}_build" # where the script is going to put its output files (YOU NEED TO CHECK THIS!; default is the home-directory of the currently logged in user) 
 current_date=`date +%s` # current date for use on all files that should get a consistent timestamp
+echo ${output_dir_base} |grep '//' >/dev/null
+if [ "$?" = "0" ]
+then
+	echo "ERROR! Please check the script variable 'output_dir_base' in the 'general_settings.sh' file.
+It seems like there was a empty variable (LOG_NAME???), which led to a wrong path description. Exiting now."
+	exit 95
+fi
 if [ "${output_dir_base:(-1):1}" = "/" ]
 then
 	output_dir="${output_dir_base}build_${current_date}" # Subdirectory for each build-run, ending with the unified Unix-Timestamp (seconds passed since Jan 01 1970)
@@ -54,6 +75,7 @@ module_load_list="mii gmac rt3090" # names of modules (for example wireless, led
 interfaces_auto="lo eth0 wlan0" # (IMPORTANT!!!) what network interfaces to bring up automatically on each boot; if you don't list the needed interfaces here, you will have to enable them manually, after booting
 nameserver_addr="192.168.2.1" # "141.82.48.1" (YOU NEED TO CHECK THIS!!!)
 
+rootfs_filesystem_type="ext4" # what filesystem type should the created rootfs be?
 
 
 ### These settings are for experienced users ###

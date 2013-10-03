@@ -227,13 +227,13 @@ else
 	exit 16
 fi
 
-fn_log_echo "Formatting the image file with the ext4 filesystem."
-mkfs.ext4 -F ${output_dir}/${output_filename}.img
+fn_log_echo "Formatting the image file with the '${rootfs_filesystem_type}' filesystem."
+mkfs.${rootfs_filesystem_type} -F ${output_dir}/${output_filename}.img
 if [ "$?" = "0" ]
 then
-	fn_log_echo "ext4 filesystem successfully created on '${output_dir}/${output_filename}.img'."
+	fn_log_echo "'${rootfs_filesystem_type}' filesystem successfully created on '${output_dir}/${output_filename}.img'."
 else
-	fn_log_echo "ERROR while trying to create the ext4 filesystem on  '${output_dir}/${output_filename}.img'. Exiting now!"
+	fn_log_echo "ERROR while trying to create the '${rootfs_filesystem_type}' filesystem on  '${output_dir}/${output_filename}.img'. Exiting now!"
 	exit 17
 fi
 
@@ -284,11 +284,11 @@ then
 	build_target_version="${build_target_version}-grip"
 	if [ ! -f /usr/share/debootstrap/scripts/${build_target_version} ]
 	then
-		fn_my_echo "Creating a symlink now, in order to make debootstrap work."
+		fn_log_echo "Creating a symlink now, in order to make debootstrap work."
 		ln -s /usr/share/debootstrap/scripts/${build_target_version%-grip} /usr/share/debootstrap/scripts/${build_target_version}
 		if [ "$?" = "0" ]
 		then
-			fn_my_echo "Debootstrap script symlink successfully created!"
+			fn_log_echo "Debootstrap script symlink successfully created!"
 		fi
 	fi
 fi
@@ -512,7 +512,7 @@ cat <<END > /etc/fstab 2>>/debootstrap_stg2_errors.txt
 # /etc/fstab: static file system information.
 #
 # <file system> <mount point>   <type>  <options>       <dump>  <pass>
-/dev/root/	/		ext4	defaults,noatime	0	1
+/dev/root/	/		${rootfs_filesystem_type}	defaults,noatime	0	1
 /dev/sda2	swap	swap	defaults,pri=0	0	0
 tmpfs		/tmp	tmpfs	defaults	0	0
 tmpfs		/var/spool	tmpfs	defaults,noatime,mode=1777	0	0
@@ -862,7 +862,7 @@ mount |grep "${output_dir}/mnt_debootstrap" > /dev/null
 if [ ! "$?" = "0" ]
 then
 	fn_log_echo "Starting the qemu environment now!"
-	qemu-system-arm -M versatilepb -cpu arm926 -no-reboot -kernel ${output_dir}/qemu-kernel/zImage -hda ${output_dir}/${output_filename}.img -m 256 -append "root=/dev/sda rootfstype=ext4 mem=256M rw" 2>qemu_error_log.txt
+	qemu-system-arm -M versatilepb -cpu arm926 -no-reboot -kernel ${output_dir}/qemu-kernel/zImage -hda ${output_dir}/${output_filename}.img -m 256 -append "root=/dev/sda rootfstype=${rootfs_filesystem_type} mem=256M rw" 2>qemu_error_log.txt
 else
 	fn_log_echo "ERROR! Filesystem is still mounted. Can't run qemu!"
 	exit 51
@@ -881,7 +881,7 @@ fn_log_echo "Compressing the rootfs now!"
 mount |grep ${output_dir}/${output_filename}.img 2>/dev/null
 if [ ! "$?" = "0" ]
 then 
-	fsck.ext4 -fy ${output_dir}/${output_filename}.img
+	fsck.${rootfs_filesystem_type} -fy ${output_dir}/${output_filename}.img
 	if [ "$?" = "0" ]
 	then
 		fn_log_echo "Temporary filesystem checked out, OK!"
@@ -978,12 +978,12 @@ Type anything else and/or hit Enter to cancel!"
 				if [ ! -z "${size_wear_leveling_spare}" ]
 				then
 					# first partition = boot (raw, size = ${size_boot_partition} )
-					parted -s --align=opt -- ${device} unit MiB mkpart primary ext4 ${size_alignment} -`expr ${size_swap_partition} + ${size_wear_leveling_spare}`
+					parted -s --align=opt -- ${device} unit MiB mkpart primary ${rootfs_filesystem_type} ${size_alignment} -`expr ${size_swap_partition} + ${size_wear_leveling_spare}`
 					# last partition = swap (swap, size = ${size_swap_partition} )
 					parted -s --align=opt -- ${device} unit MiB mkpart primary linux-swap -`expr ${size_swap_partition} + ${size_wear_leveling_spare}` -${size_wear_leveling_spare} 
 				else
 					# first partition = boot (raw, size = ${size_boot_partition} )
-					parted -s --align=opt -- ${device} unit MiB mkpart primary ext4 ${size_alignment} -${size_swap_partition}
+					parted -s --align=opt -- ${device} unit MiB mkpart primary ${rootfs_filesystem_type} ${size_alignment} -${size_swap_partition}
 					# last partition = swap (swap, size = ${size_swap_partition} )
 					parted -s --align=opt -- ${device} unit MiB mkpart primary linux-swap -${size_swap_partition} -0
 				fi
@@ -1017,7 +1017,7 @@ done
 
 if [ -e ${device}1 ] && [ -e ${device}2 ]
 then
-	mkfs.ext4 ${device}1 # ext4 on root partition
+	mkfs.${rootfs_filesystem_type} ${device}1 # ${rootfs_filesystem_type} on root partition
 	mkswap ${device}2 # swap
 else
 	fn_log_echo "ERROR: There should be 3 partitions on '${device}', but one or more seem to be missing.
@@ -1167,53 +1167,54 @@ fi
 umount_img()
 {
 cd ${output_dir}
-if [ "${1}" = "sys" ]
+if [ "${1}" = "sys" ] || [ "${1}" = "all" ]
 then
-	mount | grep "${output_dir}" >/dev/null
+	fn_log_echo "Function 'umount_img' called with parameter '$1'."
+	mount | grep "${qemu_mnt_dir}" >/dev/null
 	if [ "$?" = "0"  ]
 	then
 		fn_log_echo "Virtual Image still mounted. Trying to umount now!"
-		umount ${qemu_mnt_dir}/dev/pts 2>/dev/null
-		sleep 5
-		umount ${qemu_mnt_dir}/dev/ 2>/dev/null
-		sleep 5
+		sleep 2
+		fn_log_echo "Trying to unmount the 'proc' filesystem."
 		umount ${qemu_mnt_dir}/proc 2>/dev/null
-		sleep 5
-		umount ${qemu_mnt_dir}/sys 2>/dev/null
-		sleep 5
-	fi
-
-	mount | egrep '(${qemu_mnt_dir}/sys|${qemu_mnt_dir}/proc|${qemu_mnt_dir}/dev/pts)' > /dev/null
-	if [ "$?" = "0"  ]
-	then
-		fn_log_echo "ERROR! Something went wrong. All subdirectories of '${output_dir}' should have been unmounted, but are not."
-	else
-		fn_log_echo "Virtual image successfully unmounted."
-	fi
-elif [ "${1}" = "all" ]
-then
-	mount | grep "${output_dir}" >/dev/null
-	if [ "$?" = "0"  ]
-	then
-		fn_log_echo "Virtual Image still mounted. Trying to umount now!"
+		echo "Return value was '$?'."
+		sleep 10
+		fn_log_echo "Trying to unmount the 'pts' filesystem."
 		umount ${qemu_mnt_dir}/dev/pts 2>/dev/null
-		sleep 5
-		umount ${qemu_mnt_dir}/dev/ 2>/dev/null
-		sleep 5
-		umount ${qemu_mnt_dir}/proc 2>/dev/null
-		sleep 5
+		echo "Return value was '$?'."
+		sleep 10
+		fn_log_echo "Trying to unmount the 'sys' filesystem."
 		umount ${qemu_mnt_dir}/sys 2>/dev/null
+		echo "Return value was '$?'."
 		sleep 5
-		umount ${qemu_mnt_dir}/ 2>/dev/null
-		sleep 5
-	fi
-
-	mount | grep "${output_dir}" >/dev/null
-	if [ "$?" = "0"  ]
-	then
-		fn_log_echo "ERROR! Something went wrong. '${output_dir}' should have been unmounted, but isn't."
+		if [ "${1}" = "all" ]
+		then
+			fn_log_echo "Trying to unmount the 'qemu_rootfs' filesystem."
+			umount ${qemu_mnt_dir}/ 2>/dev/null
+			echo "Return value was '$?'."
+			sleep 2
+		fi
+		if [ "${1}" = "sys" ]
+		then
+			mount | egrep '(${qemu_mnt_dir}/sys|${qemu_mnt_dir}/proc|${qemu_mnt_dir}/dev/pts)' >/dev/null
+		else
+			mount | egrep '(${qemu_mnt_dir}/sys|${qemu_mnt_dir}/proc|${qemu_mnt_dir}/dev/pts|${qemu_mnt_dir})' >/dev/null
+		fi
+	
+		if [ "$?" = "0"  ]
+		then
+			if [ "${1}" = "sys" ]
+			then
+				fn_log_echo "ERROR! Something went wrong. All subdirectories of '${output_dir}' should have been unmounted, but are not."
+			else
+				fn_log_echo "ERROR! Something went wrong. The complete '${qemu_mnt_dir}' directory, including subdirectories should have been unmounted, but is not."
+			fi
+		else
+			fn_log_echo "Virtual image successfully unmounted."
+		fi
 	else
-		fn_log_echo "Virtual image successfully unmounted."
+		fn_log_echo "No virtual image seems to be mounted. So, no need to umount.
+Exiting function."
 	fi
 else
 	fn_log_echo "ERROR! Wrong parameter. Only 'sys' and 'all' allowed when calling 'umount_img'."
@@ -1370,6 +1371,7 @@ int_cleanup() # special treatment for script abort through interrupt ('ctrl-c'  
 	rm -r ${output_dir}/tmp 2>/dev/null
 	rm -r ${output_dir}/usb-stick 2>/dev/null
 	rm -r ${output_dir}/qemu-kernel 2>/dev/null
+	fn_log_echo "Exiting script now!"
 	exit 99
 }
 
