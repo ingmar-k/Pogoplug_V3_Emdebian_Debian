@@ -76,6 +76,7 @@ interfaces_auto="lo eth0 wlan0" # (IMPORTANT!!!) what network interfaces to brin
 nameserver_addr="192.168.2.1" # "141.82.48.1" (YOU NEED TO CHECK THIS!!!)
 
 rootfs_filesystem_type="ext4" # what filesystem type should the created rootfs be?
+# ATTENTION: Your kernel has to support the filesystem-type that you specify here. Otherwise the Pogoplug won't boot.
 
 
 ### These settings are for experienced users ###
