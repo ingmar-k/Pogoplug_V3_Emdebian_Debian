@@ -20,13 +20,11 @@
 ##################################################################################################
 ####### GETTING THE NAME OF THE LOGGED IN USER, FOR USE IN THE DEFAULT OUTPUT-DIRECTORY ##########
 ##################################################################################################
-
 if logname &> /dev/null ; then 
     LOG_NAME=$( logname )
 else 
     LOG_NAME=$( id | cut -d "(" -f 2 | cut -d ")" -f1 )		
 fi
-
 ##################################################################################################
 ##################################################################################################
 
@@ -48,6 +46,9 @@ host_os="Ubuntu" # Debian or Ubuntu (YOU NEED TO EDIT THIS!)
 
 output_dir_base="/home/${LOG_NAME}/pogoplug_v3_${build_target}_build" # where the script is going to put its output files (YOU NEED TO CHECK THIS!; default is the home-directory of the currently logged in user) 
 current_date=`date +%s` # current date for use on all files that should get a consistent timestamp
+#################################################
+########## A little necessary check #############
+#################################################
 echo ${output_dir_base} |grep '//' >/dev/null
 if [ "$?" = "0" ]
 then
@@ -61,6 +62,8 @@ then
 else
 	output_dir="${output_dir_base}/build_${current_date}" # Subdirectory for each build-run, ending with the unified Unix-Timestamp (seconds passed since Jan 01 1970)
 fi
+##################################################
+##################################################
 
 root_password="root" # password for the Debian or Emdebian root user
 username="tester"  # Name of the normal user for the target system
@@ -77,6 +80,8 @@ nameserver_addr="192.168.2.1" # "141.82.48.1" (YOU NEED TO CHECK THIS!!!)
 
 rootfs_filesystem_type="ext4" # what filesystem type should the created rootfs be?
 # ATTENTION: Your kernel has to support the filesystem-type that you specify here. Otherwise the Pogoplug won't boot.
+# ALSO, please check the Uboot Environment Variable 'bootargs' !!!
+# The part 'rootfstype=' has to reflect the filesystem that your created USB drive uses!
 
 
 ### These settings are for experienced users ###
