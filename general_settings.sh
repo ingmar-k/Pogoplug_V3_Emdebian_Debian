@@ -82,6 +82,7 @@ rootfs_filesystem_type="ext4" # what filesystem type should the created rootfs b
 # ATTENTION: Your kernel has to support the filesystem-type that you specify here. Otherwise the Pogoplug won't boot.
 # ALSO, please check the Uboot Environment Variable 'bootargs' !!!
 # The part 'rootfstype=' has to reflect the filesystem that your created USB drive uses!
+# AND your specified (and flashed!) kernel has to have support for that file system (compiled in, NOT as module!!!)
 
 
 ### These settings are for experienced users ###
