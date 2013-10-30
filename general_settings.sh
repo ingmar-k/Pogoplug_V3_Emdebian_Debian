@@ -1,5 +1,5 @@
 #!/bin/bash
-# Bash script that creates a Debian or Emdebian rootfs or even a complete USB thumb drive a Pogoplug V3 device
+# Bash script that creates a Debian or Emdebian rootfs or even a complete SATA/USB drive for a Pogoplug V3 device
 # Should run on current Debian or Ubuntu versions
 # Author: Ingmar Klein (ingmar.klein@hs-augsburg.de)
 # Additional part of the main script 'build_emdebian_debian_system.sh', that contains all the general settings
@@ -39,7 +39,7 @@ build_target_version="wheezy" # The version of debian/emdebian that you want to 
 target_mirror_url="http://ftp.uk.debian.org/emdebian/grip" # mirror address for debian or emdebian
 target_repositories="main" # what repos to use in the sources.list (for example 'main contrib non-free' for Debian)
 
-pogoplug_v3_version="pro" # either 'classic' or 'pro' (the pro features integrated wireless lan, the classic does NOT; if you set this to 'pro' 'additional_packages_wireless' will be included)
+pogoplug_v3_version="classic" # either 'classic' or 'pro' (the pro features integrated wireless lan, the classic does NOT; if you set this to 'pro' 'additional_packages_wireless' will be included)
 pogoplug_mac_address="00:00:00:00:00:00" # !!!VERY IMPORTANT!!! (YOU NEED TO EDIT THIS!) Without a valid MAC address, your device won't be accessible via LAN
 
 host_os="Ubuntu" # Debian or Ubuntu (YOU NEED TO EDIT THIS!)
@@ -73,9 +73,9 @@ deb_add_packages="apt-utils,dialog,locales,emdebian-archive-keyring,debian-archi
 additional_packages="mtd-utils udev ntp netbase module-init-tools isc-dhcp-client nano bzip2 unzip zip screen less usbutils psmisc procps ifupdown iputils-ping wget net-tools ssh hdparm" # List of packages (each seperated by a single space) that get added to the rootfs
 additional_wireless_packages="wireless-tools wpasupplicant" # packages for wireless lan; mostly for the Pogoplug V3 Pro
 
-module_load_list="mii gmac rt3090" # names of modules (for example wireless, leds ...) that should be automatically loaded through /etc/modules (list them, seperated by a single blank space)
+module_load_list="gmac" # names of modules (for example wireless, leds ...) that should be automatically loaded through /etc/modules (list them, seperated by a single blank space)
 
-interfaces_auto="lo eth0 wlan0" # (IMPORTANT!!!) what network interfaces to bring up automatically on each boot; if you don't list the needed interfaces here, you will have to enable them manually, after booting
+interfaces_auto="lo eth0" # (IMPORTANT!!!) what network interfaces to bring up automatically on each boot; if you don't list the needed interfaces here, you will have to enable them manually, after booting
 nameserver_addr="192.168.2.1" # "141.82.48.1" (YOU NEED TO CHECK THIS!!!)
 
 rootfs_filesystem_type="ext4" # what filesystem type should the created rootfs be?
@@ -95,7 +95,7 @@ extra_files="http://www.hs-augsburg.de/~ingmar_k/Pogoplug_V3/extra_files/pogoplu
 
 qemu_kernel_pkg="http://www.hs-augsburg.de/~ingmar_k/Pogoplug_V3/kernels/2.6.32.61-ppv3-qemu-1.2.tar.bz2" # qemu kernel file name
 
-std_kernel_pkg="http://www.hs-augsburg.de/~ingmar_k/Pogoplug_V3/kernels/2.6.32-ppv3-pro-zram-1.0_ARMv6k.tar.bz2" # std kernel file name
+std_kernel_pkg="http://www.hs-augsburg.de/~ingmar_k/Pogoplug_V3/kernels/2.6.32-ppv3-classic-zram-1.1_ARMv6k.tar.bz2" # std kernel file name
 
 tar_format="bz2" # bz2(=bzip2) or gz(=gzip)
 
@@ -108,8 +108,8 @@ base_sys_cache_tarball="${build_target}_${build_target_version}_minbase.tgz" # c
 output_filename="${build_target}_rootfs_pogoplug_v3_${pogoplug_v3_version}_${current_date}" # base name of the output file (compressed rootfs)
 
 ### Check these very carefully, if you experience errors while running 'check_n_install_prerequisites'
-apt_prerequisites_debian="emdebian-archive-keyring debootstrap binfmt-support qemu-user-static qemu qemu-kvm qemu-system parted" # packages needed for the build process on debian
-apt_prerequisites_ubuntu="debian-archive-keyring emdebian-archive-keyring debootstrap binfmt-support qemu qemu-user-static qemu-system qemu-kvm parted" # packages needed for the build process on ubuntu
+apt_prerequisites_debian="emdebian-archive-keyring debootstrap binfmt-support qemu-user-static qemu-kvm qemu-system-arm parted e2fsprogs" # packages needed for the build process on debian
+apt_prerequisites_ubuntu="debian-archive-keyring emdebian-archive-keyring debootstrap binfmt-support qemu-user-static qemu-system-arm qemu-kvm parted e2fsprogs" # packages needed for the build process on ubuntu
 
 
 ###################################
@@ -162,6 +162,9 @@ Wireless_Mode="5" # wireless mode setting for rt3090
 clean_tmp_files="yes" # delete the temporary files, when the build process is done?
 
 create_disk="yes" # create a bootable USB thumb drive after building the rootfs?
+# set the following option to 'yes', if you want to create a rootfs on a sata drive, in order to boot it directly, using the Pogoplug V3's onboard SATA connector!!!
+boot_directly_via_sata="no" 
+# However, if you want to boot from a USB drive, be sure to set the option ABOVE to 'no' !!!
 
 use_cache="yes" # use or don't use caching for the apt and debootstrap processes (caching can speed things up, but it can also lead to problems)
 
@@ -178,8 +181,16 @@ vm_swappiness="" # (empty string makes the script ignore this setting and uses t
 # Comment: size of the rooot partition doesn't get set directly, but is computed through the following formula:
 # root partition = size_of_usb_drive - (size_boot_partition + size_swap_partition + size_wear_leveling_spare)
 size_swap_partition="512"   # size of the swap partition, in MB (MegaByte)
-size_wear_leveling_spare="128" ## size of spare space to leave for advanced usb thumb drive flash wear leveling, in MB (MegaByte)
-size_alignment="1" ## size of spare space before the root partitionto starts (in MegaByte)
+size_wear_leveling_spare="" ## size of spare space to leave for advanced usb thumb drive flash wear leveling, in MB (MegaByte); leave empty for normal hdds
+size_alignment="1" ## size of spare space before the root partitionto starts (in MegaByte); also leave empty for normal hdds
+
+
+######################################
+##### DIRECT SATA BOOT SETTINGS: #####
+######################################
+
+sata_boot_stage1="http://www.hs-augsburg.de/~ingmar_k/Pogoplug_V3/sata_boot/stage1/stage1.wrapped700" # stage1 bootloader, needed for direct sata boot
+sata_uboot="http://www.hs-augsburg.de/~ingmar_k/Pogoplug_V3/sata_boot/u-boot/u-boot.wrapped" # uboot (stage2) file for direct sata boot
 
 
 ####################################

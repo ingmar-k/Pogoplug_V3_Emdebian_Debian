@@ -8,13 +8,13 @@
 <h1>Pogoplug_V3_Emdebian_Debian</h1>
 
 
-Scripts to create a bootable Emdebian or Debian USB-Stick for the Pogoplug V3 devices.
+Scripts to create a bootable Emdebian or Debian drive for the Pogoplug V3 devices.
 Emdebian is (mostly) binary compatible to the same Debian versions. However Emdebian is size optimized, by removing documentation etc. . 
 <br><b>Hint: Emdebian is far better suited for a NAND install!</b>
 
-<br>
+
 <h2>ATTENTION:</h2>
-<ol>
+<ul>
 <li><b>The original ARCH Linux kernel 2.6.31.6, that is flashed to NAND per default, is too old to run Debian/Emdebian Wheezy or anything newer!<br>
 
 <li>If you want to run Wheezy, or anything newer, you will have to update the kernel FIRST! Otherwise the system won't boot!</b><br>
@@ -24,8 +24,9 @@ Emdebian is (mostly) binary compatible to the same Debian versions. However Emde
 <li><b>Most of the descriptions below assume that you are able to connect to the Pogoplug via serial connection!!!</b></li><br>
 
 <li>A <b>working INTERNET CONNECTION</b> is <b>mandatory</b> and <b>must be available RIGHT AWAY</b> when running the script! So please make sure to be connected <b>before starting the script.</b></li>
-</b><br>Otherwise you will simply get an error message right away, stating the lack of a connection.</ol>
-<br>
+</b><br>Otherwise you will simply get an error message right away, stating the lack of a connection.</ul>
+<hr>
+
 
 HOWTO: Emdebian or Debian on the Pogoplug V3 (Classic and/or Pro)
 ------------------
@@ -38,7 +39,8 @@ Step-by-step description on how to get Emdebian runnning on your Pogogplug V3:
 4. **VERY IMPORTANT:** Edit the file _**general_settings.sh**_ to exactly represent your host system, Pogoplug-device and network environment.
 5. Run the script **with root privileges (su or sudo!)** by typing **`'./build_emdebian_system.sh'`**
 6. When the script is done, boot your Pogoplug Classic/Pro with the newly created USB-drive attached.
-7. If everything went well, the Plug should boot fine and be accessible via SSH (if you installed the package and the network settings are correct --> _**general_settings.sh**_ ).
+7. If everything went well, the Plug should boot fine and be accessible via SSH (if you installed the package and the network settings are correct --> <b><i>general_settings.sh</b></i> ).
+
 
 DEBUGGING:
 ----------
@@ -49,17 +51,17 @@ The main one, <b><i>log.txt</b></i> can be found under <b><i>${output_dir}/log.t
 Several other log and error-log files get created in the root directory of the target-rootfs (the root filesystem that the script creates). If you need to find an error, have a look there, too.
 If the script comes that far, you can find the files in the output-archive (hint: <b><i>${output_dir}/${output_filename}</b></i>, as set in <b><i>general_settings.sh</b></i> ) that the script creates.
 <br>If the error occurs before the creation of the output-archive, you might want to set the option <b><i>clean_tmp_files</b></i> in the <b><i>general_settings.sh</b></i> to <b><i>no</b></i>. This will cause the script to KEEP the temporary image file that is used for the rootfs creation. In order to debug you can then mount that very image file via loop, after the script failed. 
-<br><br>
+
 
 Running the script with call parameters (special functions)
---------------------------------------------------------------
+-----------------------------------------------------------
 
 The script at the moment accepts three main call parameters.
 These are **"build"**, **"install".** and **"clean"**.
 
 Descriptions:
 
-**build** : This only runs the script's functions to build a new rootfs including kernel, but does not create a bootable USB drive (USB-stick). It is meant for those creating rootfs-archives for others to use, with known-to-work configurations.
+**build** : This only runs the script's functions to build a new rootfs including kernel, but does not create a bootable USB drive (drive). It is meant for those creating rootfs-archives for others to use, with known-to-work configurations.
 
 **install** : Opposite of "build"!
 It will just download/copy/link a prebuilt rootfs-archive + bootloader and will create a bootable USB drive using these files. This is meant for people not familiar with the build specifics who just want to create a SD-card with known-to-work rootfs configurations.
@@ -91,7 +93,23 @@ As the script knows caching of apt-packages, it might sometimes be necessary to 
 **Any wrong parameter leads to an error message and a short help text, explaining the valid usage options.**
 
 
-<br><br>
+Booting directly from SATA
+--------------------------
+
+The PLX 7821, aka OXNAS 820, CPU support booting directly from SATA, without even needing NAND.
+The scrips are able to create a drive that is ready to boot directly, when connected to the internal SATA port of the Pogoplug V3 device.
+<br>In order to create a drive in such a manner, you have to do the follwoing:
+<p>
+In the file <b><i>general_settings.sh</b></i> you need to set the option <b><i>boot_directly_via_sata</b></i> to <b><i>yes</b></i>.
+<br><b>Finally you need to specifically check that the settings for the following variables are OK: 
+<ul><i>
+<li>std_kernel_pkg</li>
+<li>sata_boot_stage1</li>
+<li>sata_uboot</li></i>
+</ul></b>
+Besides that you just run the scripts, like described for USB booting.
+
+
 Flashing and testing a new kernel
 -----------------
 
@@ -111,20 +129,19 @@ Here is how to do that:
 10. The Pogoplug will then boot to the new kernel by default.
 
 
-<br>
 Root-filesystem in NAND
 -----------------
 
 Now that the Pogoplug boots Emdebian (Debian will probably be way too big for NAND) from USB, the next possible (but optional) step is putting the rootfs into NAND.
 
 1. First, shut down your Pogoplug, remove the USB drive and attach it to your desktop system that was used to create the Emdebian rootfs.
-2. Create a new directory on the USB drive (for example named _**nand_rootfs**_).
-3. Extract the created rootfs archive (by default _emdebian_rootfs_pogoplug_v3.tar.bz2_ file) into the newly created directory.
-4. Open the filesystem-table used for mounting the Rootfs ( _**../nand_rootfs/etc/fstab**_ ) with an editor (for example **nano**).
+2. Create a new directory on the USB drive (for example named <b><i>nand_rootfs</b></i>).
+3. Extract the created rootfs archive (by default <b><i>emdebian_rootfs_pogoplug_v3.tar.bz2</b></i> file) into the newly created directory.
+4. Open the filesystem-table used for mounting the Rootfs ( <b><i>./nand_rootfs/etc/fstab</b></i> ) with an editor (for example <b>nano</b>).
 5. Remove the 2 lines **'/dev/root	/	ext3/ext4	defaults,noatime	0	1'** and **'/dev/sda2	none	swap	defaults	0	0'**, **replace** them with **'/dev/root	/	ubifs	defaults,noatime	0	0'** and save the file.
-6. Make absolutely sure that the _**nand_rootfs**_-directory includes the needed kernel modules in _**/lib/modules**_ !
+6. Make absolutely sure that the <b><i>nand_rootfs</b></i>-directory includes the needed kernel modules in <b><i>/lib/modules</b></i> !
 7. To delete the contents of the old rootfs in nand, run the command <b>`'flash_eraseall /dev/mtd2'`</b> ( with mtd2 being the rootfs partition according to <b>`'cat /proc/mtd'`</b> ).
-8. Change into a different directory, that is not part of the _**nand_rootfs**_ dir !!!
+8. Change into a different directory, that is not part of the <b><i>nand_rootfs</b></i> dir !!!
 9. Create a file called _**ubinize.cfg**_, with the following content:
 
     <b> [ubifs]

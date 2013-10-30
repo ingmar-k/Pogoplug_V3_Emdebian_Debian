@@ -1,5 +1,5 @@
 #!/bin/bash
-# Bash script that creates a Debian or Emdebian rootfs or even a complete USB thumb drive a Pogoplug V3 device
+# Bash script that creates a Debian or Emdebian rootfs or even a complete SATA/USB drive for a Pogoplug V3 device
 # Should run on current Debian or Ubuntu versions
 # Author: Ingmar Klein (ingmar.klein@hs-augsburg.de)
 
@@ -512,7 +512,7 @@ cat <<END > /etc/fstab 2>>/debootstrap_stg2_errors.txt
 # /etc/fstab: static file system information.
 #
 # <file system> <mount point>   <type>  <options>       <dump>  <pass>
-/dev/root/	/		${rootfs_filesystem_type}	defaults,noatime	0	1
+/dev/root	/		${rootfs_filesystem_type}	defaults,noatime	0	1
 /dev/sda2	swap	swap	defaults,pri=0	0	0
 tmpfs		/tmp	tmpfs	defaults	0	0
 tmpfs		/var/spool	tmpfs	defaults,noatime,mode=1777	0	0
@@ -595,6 +595,29 @@ then
 		get_n_check_file "${qemu_kernel_pkg}" "qemu_kernel" "${output_dir}/tmp"
 		cp ${output_dir}/tmp/${qemu_kernel_pkg##*/} ${output_dir_base}/cache/
 	fi
+	if [ "${boot_directly_via_sata}" = "yes" ]
+	then
+		tar_all extract "${output_dir}/tmp/${std_kernel_pkg##*/}" "${output_dir}/tmp"
+		sleep 1
+		if [ -e ${output_dir_base}/cache/${sata_boot_stage1##*/} ]
+		then
+			fn_log_echo "Found SATA stage1 bootlaoder in cache. Just linking it locally now."
+			ln -s ${output_dir_base}/cache/${sata_boot_stage1##*/} ${output_dir}/tmp/${sata_boot_stage1##*/}
+		else
+			fn_log_echo "SATA stage1 bootloader NOT found in cache. Getting it now and copying it to cache."
+			get_n_check_file "${sata_boot_stage1}" "sata stage1" "${output_dir}/tmp"
+			cp ${output_dir}/tmp/${sata_boot_stage1##*/} ${output_dir_base}/cache/
+		fi
+		if [ -e ${output_dir_base}/cache/${sata_uboot##*/} ]
+		then
+			fn_log_echo "Found SATA uboot bootlaoder in cache. Just linking it locally now."
+			ln -s ${output_dir_base}/cache/${sata_uboot##*/} ${output_dir}/tmp/${sata_uboot##*/}
+		else
+			fn_log_echo "SATA uboot bootloader NOT found in cache. Getting it now and copying it to cache."
+			get_n_check_file "${sata_uboot}" "sata uboot" "${output_dir}/tmp"
+			cp ${output_dir}/tmp/${sata_uboot##*/} ${output_dir_base}/cache/
+		fi
+	fi
 else	
 	get_n_check_file "${std_kernel_pkg}" "standard_kernel" "${output_dir}/tmp"
 	get_n_check_file "${qemu_kernel_pkg}" "qemu_kernel" "${output_dir}/tmp"
@@ -604,10 +627,17 @@ fi
 	sleep 1
 	tar_all extract "${output_dir}/tmp/${std_kernel_pkg##*/}" "${qemu_mnt_dir}"
 	sleep 1
+	if [ "${boot_directly_via_sata}" = "yes" ]
+	then
+		tar_all extract "${output_dir}/tmp/${std_kernel_pkg##*/}" "${output_dir}/tmp"
+		sleep 1
+		get_n_check_file "${sata_boot_stage1}" "sata stage1" "${output_dir}/tmp"
+		get_n_check_file "${sata_uboot}" "sata uboot" "${output_dir}/tmp"
+	fi
 
 if [ -d ${output_dir}/qemu-kernel/lib/ ]
 then
-	cp -ar ${output_dir}/qemu-kernel/lib/ ${qemu_mnt_dir}  # copy the qemu kernel modules intot the rootfs
+	cp -ar ${output_dir}/qemu-kernel/lib/ ${qemu_mnt_dir}  # copy the qemu kernel modules into the rootfs
 fi
 sync
 chown root:root ${output_dir}/mnt_debootstrap/lib/modules/ -R
@@ -804,6 +834,11 @@ then
 	sed -i 's<^CONCURRENCY=makefile<CONCURRENCY=\"none\"<g' /etc/init.d/rc
 fi
 
+if [ \"${boot_directly_via_sata}\" = \"yes\" ]
+then
+	sed -i 's</dev/sda2</dev/sda3/<g' /etc/fstab
+fi
+
 sed -i 's<#T0:2345:respawn:/sbin/getty<T0:2345:respawn:/sbin/getty<g' /etc/inittab
 dpkg -l >/installed_packages.txt
 df -ah > /disk_usage.txt
@@ -944,8 +979,14 @@ fn_log_echo "Rootfs successfully DONE!"
 
 
 # Description: Get the USB drive device and than create the partitions and format them
+# BIG THANKS go to WarheadsSE for his SATA booting procedure, that made the direct SATA booting option in this script possible.
+# Original thread, concerning the topic of direct sata booting can be found here: http://archlinuxarm.org/forum/viewtopic.php?t=2146
 partition_n_format_disk()
 {
+if [ "${boot_directly_via_sata}" = "yes" ]
+then
+	fn_log_echo "Direct SATA boot is enabled. Preparing drive for SATA boot, now."
+fi
 device=""
 echo "Now listing all available devices:
 "
@@ -960,8 +1001,8 @@ Please enter the name of the USB drive device (eg. /dev/sdb) OR press ENTER to r
 read device
 if [ -e ${device} ] &&  [ "${device:0:5}" = "/dev/" ]
 then
-	umount ${device}*
-	mount |grep ${device}
+	umount ${device}* 2>/dev/null
+	mount |grep ${device} >/dev/null
 	if [ ! "$?" = "0" ]
 	then
 		echo "${device} partition table:"
@@ -971,29 +1012,63 @@ Type anything else and/or hit Enter to cancel!"
 		read affirmation
 		if [ "${affirmation}" = "yes" ]
 		then
-			if [ ! -z "${size_swap_partition}" ]
-			then
-				fn_log_echo "USB drive device set to '${device}', according to user input."
-				parted -s ${device} mklabel msdos
-				if [ ! -z "${size_wear_leveling_spare}" ]
+			if [ ! "${boot_directly_via_sata}" = "yes" ]
+			then 
+				if [ ! -z "${size_swap_partition}" ]
 				then
-					# first partition = boot (raw, size = ${size_boot_partition} )
-					parted -s --align=opt -- ${device} unit MiB mkpart primary ${rootfs_filesystem_type} ${size_alignment} -`expr ${size_swap_partition} + ${size_wear_leveling_spare}`
-					# last partition = swap (swap, size = ${size_swap_partition} )
-					parted -s --align=opt -- ${device} unit MiB mkpart primary linux-swap -`expr ${size_swap_partition} + ${size_wear_leveling_spare}` -${size_wear_leveling_spare} 
+					fn_log_echo "USB drive device set to '${device}', according to user input."
+					parted -s ${device} mklabel msdos
+					if [ ! -z "${size_wear_leveling_spare}" ]
+					then
+						# first partition = root (ext3/ext4, size = rest of drive )
+						parted -s --align=opt -- ${device} unit MiB mkpart primary ${rootfs_filesystem_type} ${size_alignment} -`expr ${size_swap_partition} + ${size_wear_leveling_spare}`
+						# last partition = swap (swap, size = ${size_swap_partition} )
+						parted -s --align=opt -- ${device} unit MiB mkpart primary linux-swap -`expr ${size_swap_partition} + ${size_wear_leveling_spare}` -${size_wear_leveling_spare} 
+					else
+						# first partition = root (ext3/ext4, size = rest of drive )
+						parted -s --align=opt -- ${device} unit MiB mkpart primary ${rootfs_filesystem_type} ${size_alignment} -${size_swap_partition}
+						# last partition = swap (swap, size = ${size_swap_partition} )
+						parted -s --align=opt -- ${device} unit MiB mkpart primary linux-swap -${size_swap_partition} -0
+					fi
+					echo ">>> ${device} Partition table is now:"
+					parted -s ${device} unit MiB print
 				else
-					# first partition = boot (raw, size = ${size_boot_partition} )
-					parted -s --align=opt -- ${device} unit MiB mkpart primary ${rootfs_filesystem_type} ${size_alignment} -${size_swap_partition}
-					# last partition = swap (swap, size = ${size_swap_partition} )
-					parted -s --align=opt -- ${device} unit MiB mkpart primary linux-swap -${size_swap_partition} -0
+					fn_log_echo "ERROR! The setting for 'size_swap_partition' seems to be empty.
+	Exiting now!"
+					regular_cleanup
+					exit 29
 				fi
-				echo ">>> ${device} Partition table is now:"
-				parted -s ${device} unit MiB print
 			else
-				fn_log_echo "ERROR! The setting for 'size_swap_partition' seems to be empty.
-Exiting now!"
-				regular_cleanup
-				exit 29
+				if [ ! -z "${size_swap_partition}" ]
+				then
+					fn_log_echo "SATA drive device set to '${device}', according to user input."
+					parted -s ${device} mklabel msdos
+					if [ ! -z "${size_wear_leveling_spare}" ]
+					then
+						# first (implicit) partition for bootloader = 2048 sectors = 1MB
+						# second partition for kernel
+						parted -s --align=opt -- ${device} unit MiB mkpart primary 1 9 # 8MB second partition at the beginning of the drive for the kernel
+						# third partition = root (ext3/ext4, size = rest of drive )
+						parted -s --align=opt -- ${device} unit MiB mkpart primary ${rootfs_filesystem_type} 9 -`expr ${size_swap_partition} + ${size_wear_leveling_spare}`
+						# last partition = swap (swap, size = ${size_swap_partition} )
+						parted -s --align=opt -- ${device} unit MiB mkpart primary linux-swap -`expr ${size_swap_partition} + ${size_wear_leveling_spare}` -${size_wear_leveling_spare} 
+					else
+						# first (implicit) partition for bootloader = 2048 sectors = 1MB
+						# second partition for kernel
+						parted -s --align=opt -- ${device} unit MiB mkpart primary 1 9 # 16MB second partition at the beginning of the drive
+						# third partition = root (ext3/ext4, size = rest of drive )
+						parted -s --align=opt -- ${device} unit MiB mkpart primary ${rootfs_filesystem_type} 9 -${size_swap_partition}
+						# last partition = swap (swap, size = ${size_swap_partition} )
+						parted -s --align=opt -- ${device} unit MiB mkpart primary linux-swap -${size_swap_partition} -0
+					fi
+					echo ">>> ${device} Partition table is now:"
+					parted -s ${device} unit MiB print
+				else
+					fn_log_echo "ERROR! The setting for 'size_swap_partition' seems to be empty.
+	Exiting now!"
+					regular_cleanup
+					exit 29
+				fi
 			fi
 		else
 			fn_log_echo "Action canceled by user. Exiting now!"
@@ -1015,15 +1090,46 @@ fi
 
 done
 
-if [ -e ${device}1 ] && [ -e ${device}2 ]
+if [ ! "${boot_directly_via_sata}" = "yes" ]
 then
-	mkfs.${rootfs_filesystem_type} ${device}1 # ${rootfs_filesystem_type} on root partition
-	mkswap ${device}2 # swap
-else
-	fn_log_echo "ERROR: There should be 3 partitions on '${device}', but one or more seem to be missing.
-Exiting now!"
-	regular_cleanup
-	exit 31
+	if [ -e ${device}1 ] && [ -e ${device}2 ]
+	then
+		mkfs.${rootfs_filesystem_type} ${device}1 # ${rootfs_filesystem_type} on root partition
+		tune2fs -L "rootfs" ${device}1 # give rootfs partition the corresponding label
+		mkswap ${device}2 # swap
+	else
+		fn_log_echo "ERROR: There should be 3 partitions on '${device}', but one or more seem to be missing.
+	Exiting now!"
+		regular_cleanup
+		exit 31
+	fi
+else # case of direct sata booting
+	if [ -e ${device}1 ] && [ -e ${device}2 ] && [ -e ${device}3 ]
+	then
+		dd if=/dev/zero of=${device}1 >/dev/null # partition 1 needs to be raw, without a filesystem
+		### Now writing the hex codes for SATA booting to the drive's bootsector
+		perl <<EOF | dd of=${device} bs=512
+print "\x00" x 0x1a4;
+print "\x00\x5f\x01\x00";
+print "\x00\xdf\x00\x00";
+print "\x00\x80\x00\x00";
+print "\x00" x (0x1b0 -0x1a4 -12 );
+print "\x22\x80\x00\x00";
+print "\x22\x00\x00\x00";
+print "\x00\x80\x00\x00";
+EOF
+		dd if=${output_dir}/tmp/${sata_boot_stage1##*/} of=${device} bs=512 seek=34 && fn_log_echo "Stage1 bootloader successfully written to disk '${device}'." # write stage1 to disk
+		dd if=${output_dir}/tmp/${sata_uboot##*/} of=${device} bs=512 seek=154 && fn_log_echo "Uboot successfully written to disk '${device}'." # write uboot to disk
+		dd if=${output_dir}/tmp/uImage of=${device}1 bs=512 && fn_log_echo "Kernel successfully written to disk '${device}'." # write kernel to disk
+		mkfs.${rootfs_filesystem_type} ${device}2 # ${rootfs_filesystem_type} on root partition
+		tune2fs -L "rootfs" ${device}2 # give rootfs partition the corresponding label
+		mkswap ${device}3 # swap
+	else
+		fn_log_echo "ERROR: There should be 3 partitions on '${device}', but one or more seem to be missing.
+	Exiting now!"
+		regular_cleanup
+		exit 31
+	fi
 fi
 
 sleep 1
@@ -1032,31 +1138,35 @@ partprobe
 
 
 
-# Description: Copy rootfs and kernel-modules to the USB-stick and then unmount it
+# Description: Copy rootfs and kernel-modules to the drive and then unmount it
 finalize_disk()
 {
 if [ -e ${device} ] &&  [ "${device:0:5}" = "/dev/" ]
 then
-	umount ${device}*
+	umount ${device}* 2>/dev/null
 	sleep 3
-	mount |grep ${device}
+	mount |grep ${device} >/dev/null
 	if [ ! "$?" = "0" ]
 	then
 		# unpack the filesystem and kernel to the root partition
-		fn_log_echo "Now unpacking the rootfs to the USB-stick's root partition!"
+		fn_log_echo "Now unpacking the rootfs to the drive's root partition!"
 
-		mkdir ${output_dir}/usb-stick
-
+		mkdir ${output_dir}/drive
 		if [ "$?" = "0" ]
 		then
-			fsck -fy ${device}1 # just to be sure
-			
-			mount ${device}1 ${output_dir}/usb-stick
+			if [ ! "${boot_directly_via_sata}" = "yes" ]
+			then
+				rootfs_partition_number="1"
+			else
+				rootfs_partition_number="2"
+			fi
+			fsck -fy ${device}${rootfs_partition_number} # just to be sure
+			mount ${device}${rootfs_partition_number} ${output_dir}/drive
 			if [ "$?" = "0" ]
 			then
 				if [ -e ${output_dir}/${output_filename}.tar.${tar_format} ]
 				then 
-					tar_all extract "${output_dir}/${output_filename}.tar.${tar_format}" "${output_dir}/usb-stick"
+					tar_all extract "${output_dir}/${output_filename}.tar.${tar_format}" "${output_dir}/drive"
 				else
 					fn_log_echo "ERROR: File '${output_dir}/${output_filename}.tar.${tar_format}' doesn't seem to exist. Exiting now!"
 					regular_cleanup
@@ -1064,28 +1174,28 @@ then
 				fi
 				sleep 1
 			else
-				fn_log_echo "ERROR while trying to mount '${device}1' to '${output_dir}/usb-stick'. Exiting now!"
+				fn_log_echo "ERROR while trying to mount '${device}1' to '${output_dir}/drive'. Exiting now!"
 				regular_cleanup
 				exit 81
 			fi
 		else
-			fn_log_echo "ERROR while trying to create the temporary directory '${output_dir}/usb-stick'. Exiting now!"
+			fn_log_echo "ERROR while trying to create the temporary directory '${output_dir}/drive'. Exiting now!"
 			regular_cleanup
 			exit 82
 		fi
 		
 		sleep 3
-		fn_log_echo "Nearly done! Now trying to unmount the usb-stick."
-		umount ${output_dir}/usb-stick
+		fn_log_echo "Nearly done! Now trying to unmount the drive."
+		umount ${output_dir}/drive
 
 		sleep 3
 		fn_log_echo "Now doing a final filesystem check."
-		fsck -fy ${device}1 # final check
+		fsck -fy ${device}${rootfs_partition_number} # final check
 
 		if [ "$?" = "0" ]
 		then
-			fn_log_echo "USB-Stick successfully created!
-You can remove the usb-stick now
+			fn_log_echo "drive successfully created!
+You can remove the drive now
 and try it with your pogoplug-V3.
 ALL DONE!"
 		else
@@ -1093,7 +1203,7 @@ ALL DONE!"
 		fi
 
 		rm -r ${output_dir}/tmp
-		rm -r ${output_dir}/usb-stick
+		rm -r ${output_dir}/drive
 	else
 		fn_log_echo "ERROR! Some partition on device '${device}' is still mounted. Exiting now!"
 	fi
@@ -1369,7 +1479,7 @@ int_cleanup() # special treatment for script abort through interrupt ('ctrl-c'  
 	umount_img all 2>/dev/null
 	rm -r ${qemu_mnt_dir} 2>/dev/null
 	rm -r ${output_dir}/tmp 2>/dev/null
-	rm -r ${output_dir}/usb-stick 2>/dev/null
+	rm -r ${output_dir}/drive 2>/dev/null
 	rm -r ${output_dir}/qemu-kernel 2>/dev/null
 	fn_log_echo "Exiting script now!"
 	exit 99
@@ -1381,6 +1491,6 @@ regular_cleanup() # cleanup for all other error situations
 	umount_img all 2>/dev/null
 	rm -r ${qemu_mnt_dir} 2>/dev/null
 	rm -r ${output_dir}/tmp 2>/dev/null
-	rm -r ${output_dir}/usb-stick 2>/dev/null
+	rm -r ${output_dir}/drive 2>/dev/null
 	rm -r ${output_dir}/qemu-kernel 2>/dev/null
 }

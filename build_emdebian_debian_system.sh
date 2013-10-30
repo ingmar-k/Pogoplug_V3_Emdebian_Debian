@@ -1,5 +1,5 @@
 #!/bin/bash
-# Bash script that creates a Debian or Emdebian rootfs or even a complete USB thumb drive a Pogoplug V3 device
+# Bash script that creates a Debian or Emdebian rootfs or even a complete SATA/USB drive for a Pogoplug V3 device
 # Should run on current Debian or Ubuntu versions
 # Author: Ingmar Klein (ingmar.klein@hs-augsburg.de)
 
